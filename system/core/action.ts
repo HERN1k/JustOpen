@@ -5,6 +5,7 @@ import type { Registry } from "./registry";
 import { Response } from "./response";
 import { join } from "path";
 import { existsSync } from "node:fs";
+import { StringHelper } from "../helper/string";
 
 /**
  * The Action class is responsible for locating, importing, and executing
@@ -37,14 +38,12 @@ export class Action {
         const filePath = join(baseDir, parser.folder, `${parser.file}.ts`);
         
         // Generate class name: e.g., 'product_list' -> 'ProductListController'
-        const className = parser.file
-            .split('_')
-            .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-            .join('') + 'Controller';
+        const className = StringHelper.toPascalCase(parser.file) + 'Controller';
+
         const action = parser.action;
 
         // Configuration for the Not Found (404) fallback
-        const notFoundFilePath = join(baseDir, `error/not_found.ts`); // Обычно 404 живет в error/not_found
+        const notFoundFilePath = join(baseDir, `error/not_found.ts`);
         const notFoundClassName = 'NotFoundController';
         const notFoundAction = 'index';
 

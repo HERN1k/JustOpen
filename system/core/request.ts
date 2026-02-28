@@ -1,40 +1,7 @@
 // Developed by Hirnyk Vlad (HERN1k)
 
 import { CUSTOMERS_DIR, BASE_URL, ADMIN_DIR } from "../../config";
-
-/**
- * Result of the route parsing process.
- */
-export type ParserResult = {
-    /** Application directory: 'admin' or 'catalog' */
-    path: string;
-    /** Controller folder (e.g., 'common' or 'product') */
-    folder: string;
-    /** Controller filename without extension */
-    file: string;
-    /** Method (action) to be called within the controller */
-    action: string;
-    /** Full route string (e.g., 'common/home/index') */
-    route: string;
-};
-
-/**
- * Structure of an uploaded file.
- */
-export interface UploadedFile {
-    /** Original filename, e.g., 'photo.jpg' */
-    name: string;    
-    /** MIME type of the file, e.g., 'image/jpeg' */
-    type: string;     
-    /** Absolute path to the temporary file on the server */
-    tmpName: string;   
-    /** File size in bytes */
-    size: number;    
-    /** File extension in lowercase (without dot) */
-    extension: string;
-    /** Upload error code (0 for success) */
-    error: number;
-}
+import type { ParserResult, IUploadedFile } from "./types";
 
 /**
  * The Request class handles the incoming HTTP request.
@@ -46,13 +13,17 @@ export class Request {
     /** POST data from the request body (sanitized) */
     public post: Record<string, any> = {};
     /** Uploaded files indexed by the form field name */
-    public files: Record<string, UploadedFile> = {};
+    public files: Record<string, IUploadedFile> = {};
     /** Cookies sent by the client */
     public cookie: Record<string, string> = {};
     /** HTTP request headers */
     public headers: Record<string, string> = {};
     /** Server and execution environment info (Method, IP, User-Agent) */
     public server: Record<string, string> = {};
+    /** UI theme */
+    public layout: string = 'theme';
+    /** Language */
+    public language: string = 'en';
     
     private _parserResult!: ParserResult;
     private readonly _defaultRoute = 'common/home';

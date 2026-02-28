@@ -1,27 +1,18 @@
 // Developed by Hirnyk Vlad (HERN1k)
 
-import type { Request } from "./request";
-import type { Response } from "./response";
-import type { DB } from "./db";
-
-export interface RegistryData {
-    request: Request;
-    response: Response;
-    db: DB;
-    [key: string]: any;
-}
+import type { IRegistryData } from "./types";
 
 /**
  * Request registry with strict typing
  */
 export class Registry {
-    private data: Partial<RegistryData> & Record<string, any> = {};
+    private data: Partial<IRegistryData> & Record<string, any> = {};
 
     /**
      * Get a service from registry
      * @param key
      */
-    public get<K extends keyof RegistryData>(key: K): RegistryData[K];
+    public get<K extends keyof IRegistryData>(key: K): IRegistryData[K];
     public get<T = any>(key: string): T;
     public get(key: string): any {
         return this.data[key];
@@ -30,7 +21,7 @@ export class Registry {
     /**
      * Set a service into registry
      */
-    public set<K extends keyof RegistryData>(key: K, value: RegistryData[K]): void;
+    public set<K extends keyof IRegistryData>(key: K, value: IRegistryData[K]): void;
     public set(key: string, value: any): void;
     public set(key: string, value: any): void {
         this.data[key] = value;
@@ -39,7 +30,7 @@ export class Registry {
     /**
      * Check if service exists
      */
-    public has(key: keyof RegistryData | string): boolean {
+    public has(key: keyof IRegistryData | string): boolean {
         return key in this.data;
     }
 }

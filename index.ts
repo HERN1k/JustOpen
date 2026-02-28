@@ -6,6 +6,7 @@ import { Registry } from './system/core/registry';
 import { Request as CustomRequest } from './system/core/request';
 import { Response as CustomResponse } from './system/core/response';
 import { DB } from './system/core/db';
+import { Render } from './system/core/render';
 
 /**
  * Main Application Class to handle Bun server lifecycle and request processing.
@@ -52,7 +53,9 @@ class App {
 
         registry.set('response', new CustomResponse());
 
-        registry.set('db', new DB(DB_DRIVER, DB_CONFIG)); 
+        registry.set('db', new DB(DB_DRIVER, DB_CONFIG));
+
+        registry.set('render', new Render(registry));
 
         const response = await new Action(registry).execute();
 

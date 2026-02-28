@@ -1,7 +1,7 @@
 import mysql from 'mysql2/promise';
-import type { DBDriver, DBResult } from "../../core/db";
+import type { IDBDriver, IDBResult } from "../../core/types";
 
-export class MySQLi implements DBDriver {
+export class MySQLi implements IDBDriver {
     private connection: any;
     private lastInsertId: number = 0;
 
@@ -11,13 +11,13 @@ export class MySQLi implements DBDriver {
         }
     }
 
-    public async query(sql: string): Promise<DBResult> {
+    public async query(sql: string): Promise<IDBResult> {
         const [rows] = await this.connection.execute(sql);
         
         return {
             rows: Array.isArray(rows) ? rows : [],
             numRows: Array.isArray(rows) ? rows.length : 0
-        };
+        } as IDBResult;
     }
 
     public escape(value: string): string {
