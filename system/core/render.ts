@@ -2,12 +2,11 @@
 
 import { renderToString } from "react-dom/server";
 import { minify } from "html-minifier-terser";
-import { createElement, Fragment } from "react";
-import type { ComponentType, ReactNode } from "react";
-import type { Registry } from "./registry";
+import { createElement } from "react";
 import { StringHelper } from "../helper/string";
 import { pathToFileURL } from "node:url";
-import type { ComponentBlock } from "./types";
+import type { ComponentType } from "react";
+import type { Registry } from "./registry";
 
 /**
  * Core Rendering Engine.
@@ -15,17 +14,122 @@ import type { ComponentBlock } from "./types";
  */
 export class Render {
     private registry: Registry;
-    private slots: Map<string, ComponentBlock[]> = new Map(); 
     private pageData: Record<string, any> = {};
-    private layout: ComponentType<any> | null = null;
 
     constructor(registry: Registry) {
         this.registry = registry;
     }
 
     /**
-     * Set the main Layout for this specific request.
+     * Set data for this specific request.
      */
+    public setPageData(data: Record<string, any>): void {
+        this.pageData = { ...this.pageData, ...data };
+    }
+
+    public async getPage(content: string): Promise<string> {
+        // get layout name from db
+        const layoutName: string = 'theme';
+
+        if (StringHelper.isNullOrWhiteSpace(layoutName)) {
+            console.error(`[ViewLoader] Layout name is empty!`);
+            return '';
+        }
+
+        const request = this.registry.get('request');
+        const parser = request.getParserResult();
+
+        const path: string = `${parser.path}/view/${layoutName}/layout.tsx`; // maybe set this in Load class
+
+        try {
+            const fileUrl = pathToFileURL(path).href;
+            
+            const module = await import(fileUrl);
+            
+            if (typeof module['index'] === 'function') {
+                this.registry.get('request').layout = layoutName;
+
+                const response = createElement(module['index'], {
+                    ...this.pageData,
+                    lang: 'uk',
+                    content
+                });
+
+                let rawHTML = renderToString(response);
+
+                if (StringHelper.isNullOrWhiteSpace(rawHTML)) {
+                    rawHTML = '<!DOCTYPE html>' + rawHTML;
+                }
+
+                return await minify(rawHTML, {
+                    collapseWhitespace: true,
+                    removeComments: true,
+                    minifyJS: true,
+                    minifyCSS: true,
+                    processConditionalComments: true,
+                    removeAttributeQuotes: false,
+                    removeEmptyAttributes: true
+                });
+            } else {
+                console.error(`[ViewLoader] Export "${layoutName}" is not a function in ${path}`);
+                throw new Error('[Render] Layout not found or invalid!');
+            }
+        } catch (error) {
+            console.error(`[ViewLoader] Critical error loading ${path}:`, error);
+        }
+
+        return '';
+    }
+
+    /**
+     * Build the final minified HTML.
+     */
+    public async build(component: ComponentType<any>, data: Map<string, string>): Promise<string> {
+        if (!component) {
+            return '';
+        }
+        
+        const getter = (key: string): string => {
+            return data.get(key) ?? ''; 
+        };
+
+        const rawHTML = renderToString(createElement(component, { data: data, get: getter  }));
+
+        return await minify(rawHTML, {
+            collapseWhitespace: true,
+            removeComments: true,
+            minifyJS: true,
+            minifyCSS: true,
+            processConditionalComments: true,
+            removeAttributeQuotes: false,
+            removeEmptyAttributes: true
+        });
+    }
+
+    /* public async build(component: ComponentType<any>, data: Map<string, string>): Promise<string> {
+        if (!this.layout) {
+            await this.setLayout('theme');
+        }
+
+        const pageElement = createElement(component, {
+            ...this.pageData,
+            lang: 'ru',
+            renderSlot: (name: string) => this.getSlot(name)
+        });
+
+        const rawHtml = `<!DOCTYPE html>${renderToString(pageElement)}`;
+
+        return await minify(rawHtml, {
+            collapseWhitespace: true,
+            removeComments: true,
+            minifyJS: true,
+            minifyCSS: true,
+            processConditionalComments: true,
+            removeAttributeQuotes: false,
+            removeEmptyAttributes: true
+        });
+    } 
+        
     public async setLayout(layout: string): Promise<void> {
         if (StringHelper.isNullOrWhiteSpace(layout)) {
             console.error(`[ViewLoader] Layout name is empty!`);
@@ -55,17 +159,34 @@ export class Render {
         }
     }
 
-    /**
-     * Set data for this specific request.
-     */
-    public setPageData(data: Record<string, any>): void {
-        this.pageData = { ...this.pageData, ...data };
+    
+
+    public async add(path: string, props?: any): Promise<void> {
+        this.addBlockByComponent({
+            slot: 'main',
+            component: await Load.loadView(this.registry, path),
+            props: props
+        }); 
     }
 
-    /**
-     * Add a block to a slot for this specific request.
-     */
-    public addBlock(slot: string, component: ComponentType<any> | null | undefined, props: any = {}, priority: number = 100): void {
+    
+    public async addBlock(options: RenderPathOptions): Promise<void> {
+        this.addBlockByComponent({
+            slot: options.slot || 'main',
+            component: await Load.loadView(this.registry, options.path),
+            props: options.props,
+            priority: options.priority || 100
+        });
+    }
+
+    public addBlockByComponent(options: RenderComponentOptions): void {
+        const { 
+            component, 
+            slot = 'main', 
+            props = {}, 
+            priority = 100 
+        } = options;
+
         if (component) {
             if (!this.slots.has(slot)) {
                 this.slots.set(slot, []);
@@ -76,11 +197,9 @@ export class Render {
         }
     }
 
-    /**
-     * Render a slot into a React fragment.
-     */
     public getSlot(slotName: string): ReactNode {
         const blocks = this.slots.get(slotName) || [];
+
         return createElement(
             Fragment,
             null,
@@ -92,32 +211,5 @@ export class Render {
                 })
             )
         );
-    }
-
-    /**
-     * Build the final minified HTML.
-     */
-    public async build(): Promise<string> {
-        if (!this.layout) {
-            await this.setLayout('theme');
-        }
-
-        const pageElement = createElement(this.layout!, {
-            ...this.pageData,
-            lang: 'ru',
-            renderSlot: (name: string) => this.getSlot(name)
-        });
-
-        const rawHtml = `<!DOCTYPE html>${renderToString(pageElement)}`;
-
-        return await minify(rawHtml, {
-            collapseWhitespace: true,
-            removeComments: true,
-            minifyJS: true,
-            minifyCSS: true,
-            processConditionalComments: true,
-            removeAttributeQuotes: false,
-            removeEmptyAttributes: true
-        });
-    }
+    } */
 }

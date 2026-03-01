@@ -78,8 +78,14 @@ export class Action {
             if (module[className]) {
                 const controller = new module[className](this.registry);
                 
-                if (typeof controller[action] === 'function') {
-                    await controller[action]();
+                if (typeof controller[action] === 'function' && 
+                    typeof controller['onEnter'] === 'function' &&
+                    typeof controller['onLeave'] === 'function'
+                ) {
+                    await controller['onEnter']();
+                    await controller[action](new Map());
+                    await controller['onLeave']();
+
                     return true;
                 }
             }

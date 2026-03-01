@@ -15,7 +15,18 @@ export class Response {
      * Internal storage for the response body content.
      * @private
      */
-    private content: string = "";
+    private content: string = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Clear Template</title>
+        </head>
+        <body>
+        </body>
+        </html>
+    `;
 
     /**
      * Gets the current output buffer.

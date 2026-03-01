@@ -4,6 +4,7 @@ import type { ReactNode, ComponentType } from "react";
 import type { Request } from "./request";
 import type { Response } from "./response";
 import type { DB } from "./db";
+import type { Render } from "./render";
 
 /**
  * Props passed to the main application Layout component.
@@ -11,10 +12,10 @@ import type { DB } from "./db";
 type LayoutProps = {
     /** Page title displayed in the browser tab */
     title: string; 
-    /** Function to render a specific content slot (header, footer, etc.) */
-    renderSlot: (name: string) => ReactNode; 
     /** ISO language code for the HTML lang attribute (e.g., 'en', 'uk') */
     lang: string;
+    /** Raw HTML content */
+    content: string;
 };
 
 /**
@@ -63,6 +64,8 @@ interface IRegistryData {
     response: Response;
     /** Database manager instance */
     db: DB;
+    /** React render instance */
+    render: Render;
     /** Allows dynamic registration of additional services or parameters */
     [key: string]: any;
 }
@@ -160,3 +163,36 @@ type CacheItem<T> = {
     /** Expiration timestamp in seconds (Unix Timestamp) */
     tte: number;
 };
+
+/**
+ * Configuration for adding a view block using a file path.
+ */
+export type RenderPathOptions = {
+    /** Path to the view file (e.g., 'common/header') */
+    path: string;
+    /** Target slot name (e.g., 'header', 'content') */
+    slot?: string;
+    /** Component properties (props) */
+    props?: any;
+    /** Execution order (lower renders first) */
+    priority?: number;
+};
+
+/**
+ * Configuration for adding a block using an existing React Component.
+ */
+export type RenderComponentOptions = {
+    /** Valid React Component type */
+    component: ComponentType<any> | null | undefined;
+    /** Target slot name (defaults to 'main') */
+    slot?: string;
+    /** Component properties (props) */
+    props?: any;
+    /** Execution order (defaults to 100) */
+    priority?: number;
+};
+
+interface IPageProps {
+    data: Map<string, string>;
+    get: (key: string) => string;
+}

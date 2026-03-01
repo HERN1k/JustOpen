@@ -1,15 +1,10 @@
 // Developed by Hirnyk Vlad (HERN1k)
 
-import { ROOT_DIR } from "../../config";
 import { Registry } from "./registry";
 import { Request } from "./request";
 import { Response } from "./response";
-import { StringHelper } from "../helper/string";
-import { join, isAbsolute, extname } from "node:path";
-import { existsSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import { Render } from "../../system/core/render";
-import type { ComponentType } from "react";
+import { Load } from "../helper/load";
 
 /**
  * Base Controller class that all application controllers must extend.
@@ -21,6 +16,10 @@ export abstract class Controller {
      * @protected
      */
     protected registry: Registry;
+    protected pageData: Record<string, any>;
+    protected components: Map<string, string>;
+    protected content: string;
+    protected contentType: string;
 
     /**
      * Initializes the controller with the system registry.
@@ -28,6 +27,21 @@ export abstract class Controller {
      */
     constructor(registry: Registry) {
         this.registry = registry;
+        this.pageData= {};
+        this.components = new Map();
+        this.content = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Clear Template</title>
+            </head>
+            <body>
+            </body>
+            </html>
+        `;
+        this.contentType = 'text/html;';
     }
 
     /**
@@ -63,61 +77,45 @@ export abstract class Controller {
     }
 
     /**
+     * Set data for this specific request.
+     */
+    protected setPageData(data: Record<string, any>): void {
+        this.pageData = { ...this.pageData, ...data };
+    }
+
+    /**
      * Dynamically imports a React component type from a file without rendering it.
      * * @description
      * Returns the component definition (function or class) instead of the rendered element.
      * Useful for passing to rendering engines or storing in component registries.
      * * @param {string} path - Path to the .tsx/.jsx file.
-     * @param {string} [action='index'] - Export name (e.g., 'index').
      * @returns {Promise<ComponentType<any> | null>} The component type or null if not found.
      * * @protected
      */
-    protected async loadView(path: string, action: string = 'index'): Promise<ComponentType<any> | null> {
-        if (StringHelper.isNullOrWhiteSpace(path)) {
-            return null;
-        }
+    protected async loadView(path: string, data: Map<string, string> = new Map()): Promise<string> {
+        return await Load.loadView(this.registry, path, data);
+    }
 
-        const request = this.registry.get('request');
-        const parser = request.getParserResult();
+    protected async loadController(path: string, data: Map<string, string> = new Map()): Promise<string> {
+        return await Load.loadController(this.registry, path, data);
+    }
 
-        path = `${parser.path}/view/${request.layout}/${path}`;
+    protected async configureContent(path: string): Promise<string>  {
+        return await Load.loadView(this.registry, path, this.components);
+    }
 
-        let fullPath = isAbsolute(path) ? path : join(ROOT_DIR, path);
+    protected async configurePage(path: string): Promise<void> {
+        this.contentType = 'text/html;';
+        this.content = await this.render.getPage(await this.loadView(path, this.components));
+        console.log('configurePage: ', { content: this.content, contentType: this.contentType });
+    }
 
-        const extensions = ['.tsx', '.jsx', '.ts', '.js'];
-        let finalPath = '';
+    public async onEnter(): Promise<void> {
+        
+    }
 
-        if (!extensions.includes(extname(fullPath))) {
-            for (const ext of extensions) {
-                if (existsSync(fullPath + ext)) {
-                    finalPath = fullPath + ext;
-                    break;
-                }
-            }
-        } else if (existsSync(fullPath)) {
-            finalPath = fullPath;
-        }
-
-        if (!finalPath) {
-            console.error(`[ViewLoader] File not found: ${fullPath} (tried ${extensions.join(',')})`);
-            return null;
-        }
-
-        try {
-            const fileUrl = pathToFileURL(finalPath).href;
-            
-            const module = await import(fileUrl);
-            const component = module[action];
-
-            if (typeof component === 'function') {
-                return component as ComponentType<any>;
-            }
-            
-            console.error(`[ViewLoader] Export "${action}" is not a function in ${finalPath}`);
-        } catch (error) {
-            console.error(`[ViewLoader] Critical error loading ${finalPath}:`, error);
-        }
-
-        return null;
+    public async onLeave(): Promise<void> {
+        this.response.setOutput(this.content); 
+        this.response.contentType = this.contentType;
     }
 }

@@ -8,14 +8,14 @@ export class HomeController extends Controller {
         super(registry);
     }
 
-    async index() {
-        this.render.setPageData({ title: 'ADMIN Головна' });
+    public async index(): Promise<void | string> {
+        this.setPageData({ title: 'ADMIN Головна' });
 
-        this.render.addBlock('main', await this.loadView('common/home'));
+        this.components.set('header', await this.loadView('common/header'));
+        this.components.set('footer', await this.loadView('common/footer'));
 
-        this.render.addBlock('header', await this.loadView('common/header'), {}, 1);
-        this.render.addBlock('footer', await this.loadView('common/footer'), {}, 500);
+        // return await this.configureContent('common/home'); // for under controller
 
-        this.response.setOutput(await this.render.build());
+        await this.configurePage('common/home');
     }
 }

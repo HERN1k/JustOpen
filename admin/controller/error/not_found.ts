@@ -9,13 +9,13 @@ export class NotFoundController extends Controller {
     }
 
     async index() {
-        this.render.setPageData({ title: 'ADMIN Error 404' });
+        this.setPageData({ title: 'ADMIN Error 404' });
 
-        this.render.addBlock('main', await this.loadView('error/not_found'));
+        this.components.set('header', await this.loadView('common/header'));
+        this.components.set('footer', await this.loadView('common/footer'));
 
-        this.render.addBlock('header', await this.loadView('common/header'), {}, 1);
-        this.render.addBlock('footer', await this.loadView('common/footer'), {}, 500);
-
-        this.response.setOutput(await this.render.build());
+        // return await this.configureContent('common/home'); // for under controller
+        
+        await this.configurePage('error/not_found');
     }
 }
