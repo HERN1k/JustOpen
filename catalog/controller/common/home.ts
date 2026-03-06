@@ -9,7 +9,23 @@ export class HomeController extends Controller {
     }
 
     public async index(): Promise<void | string> {
-        this.setPageData({ title: 'Головна' });
+        this.setPageData({ title: 'Main page' });
+
+        this.setStyles('css/main.css');
+        this.setScript('js/main.js');
+
+        this.components.set('gallery', await this.loadView('extension/module/slider', new Map([
+            [
+                'images', 
+                [
+                    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
+                    "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=1200&q=80",
+                ]
+            ]
+        ])));
 
         this.components.set('header', await this.loadView('common/header'));
         this.components.set('footer', await this.loadView('common/footer'));
@@ -17,5 +33,9 @@ export class HomeController extends Controller {
         // return await this.configureContent('common/home'); // for under controller
 
         await this.configurePage('common/home');
+    }
+
+    public async get_request(): Promise<void | string> {
+        this.JSON(this.request);
     }
 }

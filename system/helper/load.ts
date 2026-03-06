@@ -17,7 +17,7 @@ export class Load {
      * @returns {Promise<ComponentType<any> | null>} The component type or null if not found.
      * * @protected
      */
-    public static async loadView(registry: Registry, path: string, data: Map<string, string>): Promise<string> {
+    public static async loadView(registry: Registry, path: string, data: Map<string, any>): Promise<string> {
         if (StringHelper.isNullOrWhiteSpace(path)) {
             return '';
         }

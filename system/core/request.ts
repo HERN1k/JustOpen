@@ -71,6 +71,7 @@ export class Request {
         });
 
         const cleanPathname = url.pathname.replace(/^\/+|\/+$/g, '');
+        const isAdmin = cleanPathname.startsWith(ADMIN_DIR) ? true : false;
         let currentAppPath = cleanPathname.startsWith(ADMIN_DIR) ? ADMIN_DIR : CUSTOMERS_DIR;
 
         let rawRoute = this.get['route'] || this._defaultRoute;
@@ -82,6 +83,7 @@ export class Request {
         const action = parts[2] || this._defaultAction;
 
         return {
+            isAdmin: isAdmin,
             path: currentAppPath,
             folder: folder,
             file: file,

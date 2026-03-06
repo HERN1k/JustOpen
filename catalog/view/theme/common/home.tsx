@@ -6,7 +6,10 @@ export const index = ({ get }: IPageProps) => {
     return (
         <>
             <header dangerouslySetInnerHTML={{ __html: get('header') }} />
-            <main><h2>Home page</h2></main>
+            <main>
+                <h2>Home page (Slider)</h2>
+                <div dangerouslySetInnerHTML={{ __html: get('gallery') }} />
+            </main>
             <footer dangerouslySetInnerHTML={{ __html: get('footer') }} />
         </>
     );

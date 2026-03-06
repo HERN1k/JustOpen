@@ -16,6 +16,10 @@ type LayoutProps = {
     lang: string;
     /** Raw HTML content */
     content: string;
+
+    css: Array<string>;
+    
+    js: Array<string>;
 };
 
 /**
@@ -23,6 +27,7 @@ type LayoutProps = {
  * Contains decomposed information about the current URL.
  */
 type ParserResult = {
+    isAdmin: boolean;
     /** Application root directory: 'admin' or 'catalog' */
     path: string;
     /** Subdirectory within the controller folder (e.g., 'common', 'product') */
@@ -195,4 +200,6 @@ export type RenderComponentOptions = {
 interface IPageProps {
     data: Map<string, string>;
     get: (key: string) => string;
+    any: (key: string) => any;
+    [key: string]: any;
 }

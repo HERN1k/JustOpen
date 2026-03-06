@@ -1,0 +1,36 @@
+/* Ужасный CSS файл */
+
+:root {
+    --main-bg: #ffffff; /* Переменные */
+}
+
+.container {
+    display: flex; /* Нужны префиксы для старых браузеров */
+    justify-content: center;
+    align-items: center;
+    background-color: #ffffff; /* Должно стать #fff */
+    margin: 10px 10px 10px 10px; /* Должно стать 10px */
+    padding: 000.50px; /* Странные числа */
+}
+
+.button {
+    appearance: none; /* Нужен префикс -webkit-, -moz- */
+    user-select: none;
+    transform: rotate(45deg) scale(1.2); /* Тест трансформаций */
+    transition: all 0.3s ease-in-out;
+    background: linear-gradient(to bottom, #ff0000, #0000ff); /* Сложный градиент */
+}
+
+/* Пустой селектор (должен удалиться) */
+.empty-class {
+    
+}
+
+/* Комментарий с секретами */
+.secret {
+    color: rgba(255, 0, 0, 1); /* Должно стать red или #f00 */
+    border: 1px solid black; /* Должно объединиться */
+    border-width: 1px;
+    border-style: solid;
+    border-color: black;
+}

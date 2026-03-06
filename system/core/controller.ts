@@ -5,47 +5,70 @@ import { Request } from "./request";
 import { Response } from "./response";
 import { Render } from "../../system/core/render";
 import { Load } from "../helper/load";
+import { DIR_VIEW, ADMIN_DIR_VIEW } from "../../config";
+import { join } from 'path';
 
 /**
  * Base Controller class that all application controllers must extend.
- * Provides easy access to the Registry and core system components.
+ * Provides a unified interface for handling requests, managing state,
+ * and preparing responses using the system registry.
+ * * @abstract
  */
 export abstract class Controller {
     /**
-     * The system registry container.
+     * The system registry container for dependency injection.
      * @protected
      */
     protected registry: Registry;
-    protected pageData: Record<string, any>;
-    protected components: Map<string, string>;
+
+    /**
+     * Storage for data that will be passed to the view/template.
+     * @protected
+     */
+    protected pageData: Record<string, any> = {
+        'css': [],
+        'js': []
+    };
+
+    /**
+     * Map of child components to be injected into the main view.
+     * @protected
+     */
+    protected components: Map<string, string> = new Map();
+
+    /**
+     * The raw output buffer content.
+     * @protected
+     */
     protected content: string;
+
+    /**
+     * The MIME type of the response.
+     * @protected
+     */
     protected contentType: string;
 
     /**
-     * Initializes the controller with the system registry.
+     * The HTTP status code (e.g., 200, 404).
+     * @protected
+     */
+    protected statusCode: number;
+
+    /**
+     * Initializes the controller and synchronizes its initial state with the Response object.
      * @param registry The shared application registry.
      */
     constructor(registry: Registry) {
+        const response = registry.get('response');
+
         this.registry = registry;
-        this.pageData= {};
-        this.components = new Map();
-        this.content = `
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Clear Template</title>
-            </head>
-            <body>
-            </body>
-            </html>
-        `;
-        this.contentType = 'text/html;';
+        this.content = response.content;
+        this.contentType = response.contentType;
+        this.statusCode = response.statusCode;
     }
 
     /**
-     * Gets the Request object containing GET, POST, Files, and Cookies.
+     * Provides access to the Request object (GET, POST, Cookies, etc.).
      * @protected
      */
     protected get request(): Request {
@@ -53,7 +76,7 @@ export abstract class Controller {
     }
 
     /**
-     * Gets the Database connection object.
+     * Provides access to the Database connection.
      * @protected
      */
     protected get db() {
@@ -61,7 +84,7 @@ export abstract class Controller {
     }
 
     /**
-     * Gets the render object to manage react rendering.
+     * Provides access to the Render engine for React/Template processing.
      * @protected
      */
     protected get render(): Render {
@@ -69,7 +92,7 @@ export abstract class Controller {
     }
 
     /**
-     * Gets the Response object to manage output buffer and headers.
+     * Provides access to the Response object to manage headers and buffer.
      * @protected
      */
     protected get response(): Response {
@@ -77,45 +100,147 @@ export abstract class Controller {
     }
 
     /**
-     * Set data for this specific request.
+     * Merges new data into the existing page data record.
+     * @param data Object containing key-value pairs for the view.
+     * @protected
      */
     protected setPageData(data: Record<string, any>): void {
         this.pageData = { ...this.pageData, ...data };
     }
 
+    protected async setStyles(path: string): Promise<void> {
+        // get layout name from db
+        const layoutName: string = 'theme';
+
+        const parser = this.request.getParserResult();
+
+        const index = path.indexOf('src');
+        if (index !== -1) {
+            path = path.substring(index);
+        } else {
+            path = 'src/' + path;
+        }
+
+        path = parser.isAdmin 
+            ? join(ADMIN_DIR_VIEW , layoutName, path)
+            : join(DIR_VIEW, layoutName, path);
+
+        if (!this.pageData.css.includes(path)) {
+            this.pageData.css.push(path);
+        }
+    }
+
+    protected async setScript(path: string): Promise<void> {
+        // get layout name from db
+        const layoutName: string = 'theme';
+
+        const parser = this.request.getParserResult();
+
+        const index = path.indexOf('src');
+        if (index !== -1) {
+            path = path.substring(index);
+        } else {
+            path = 'src/' + path;
+        }
+
+        path = parser.isAdmin 
+            ? join(ADMIN_DIR_VIEW, layoutName, path)
+            : join(DIR_VIEW, layoutName, path);
+
+        if (!this.pageData.js.includes(path)) {
+            this.pageData.js.push(path);
+        }
+    }
+
     /**
-     * Dynamically imports a React component type from a file without rendering it.
-     * * @description
-     * Returns the component definition (function or class) instead of the rendered element.
-     * Useful for passing to rendering engines or storing in component registries.
-     * * @param {string} path - Path to the .tsx/.jsx file.
-     * @returns {Promise<ComponentType<any> | null>} The component type or null if not found.
-     * * @protected
+     * Loads a view template string.
+     * @param path Path to the view file.
+     * @param data Optional map of components or data.
+     * @returns Promise resolving to the view content string.
+     * @protected
      */
-    protected async loadView(path: string, data: Map<string, string> = new Map()): Promise<string> {
+    protected async loadView(path: string, data: Map<string, any> = new Map()): Promise<string> {
         return await Load.loadView(this.registry, path, data);
     }
 
+    /**
+     * Loads and executes another controller internally.
+     * @param path Controller path.
+     * @param data Optional initialization data.
+     * @returns Promise resolving to the controller output string.
+     * @protected
+     */
     protected async loadController(path: string, data: Map<string, string> = new Map()): Promise<string> {
         return await Load.loadController(this.registry, path, data);
     }
 
-    protected async configureContent(path: string): Promise<string>  {
+    /**
+     * Prepares content by loading a view with the registered components.
+     * @param path Path to the content template.
+     * @protected
+     */
+    protected async configureContent(path: string): Promise<string> {
         return await Load.loadView(this.registry, path, this.components);
     }
 
-    protected async configurePage(path: string): Promise<void> {
-        this.contentType = 'text/html;';
-        this.content = await this.render.getPage(await this.loadView(path, this.components));
-        console.log('configurePage: ', { content: this.content, contentType: this.contentType });
-    }
+    /**
+     * Configures the final page response using the render engine.
+     * @param path View path.
+     * @param statusCode HTTP status code. Defaults to 200.
+     * @protected
+     */
+    protected async configurePage(path: string, statusCode: number = 200): Promise<void> {
+        this.render.setPageData(this.pageData);
 
-    public async onEnter(): Promise<void> {
+        const viewContent = await this.loadView(path, this.components);
+        const renderedPage = await this.render.getPage(viewContent);
         
+        this.rowResponse(renderedPage, "text/html; charset=utf-8", statusCode);
     }
 
+    /**
+     * Helper to prepare a JSON response.
+     * @param data Data to be stringified.
+     * @param statusCode HTTP status code. Defaults to 200.
+     * @protected
+     */
+    protected JSON(data: any = {}, statusCode: number = 200): void {
+        this.rowResponse(
+            JSON.stringify(data), 
+            "application/json; charset=utf-8",
+            statusCode
+        );
+    }
+
+    /**
+     * Directly sets the raw response properties.
+     * @param response The body content.
+     * @param contentType MIME type.
+     * @param statusCode HTTP status code.
+     * @param statusText Custom status text.
+     * @protected
+     */
+    protected rowResponse(
+        response: string = "", 
+        contentType = "text/html; charset=utf-8", 
+        statusCode: number = 200
+    ): void {
+        this.statusCode = statusCode;
+        this.contentType = contentType;
+        this.content = response;
+    }
+
+    /**
+     * Lifecycle method called before the main action execution.
+     * Can be overridden to perform initialization logic.
+     */
+    public async onEnter(): Promise<void> { }
+
+    /**
+     * Lifecycle method called after the action execution.
+     * Synchronizes local controller state with the global Response object.
+     */
     public async onLeave(): Promise<void> {
-        this.response.setOutput(this.content); 
-        this.response.contentType = this.contentType;
+        this.response.setOutput(this.content, this.contentType, this.statusCode);
     }
 }

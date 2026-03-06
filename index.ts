@@ -33,6 +33,11 @@ class App {
      * @param request - Incoming Bun request.
      */
     private async handleRequest(request: Request): Promise<Response> {
+        const staticResponse = await this.handleStaticFile(request.url);
+        if (staticResponse) {
+            return staticResponse;
+        }
+
         const { body, files } = await this.parseRequestBody(request);
 
         const headers: Record<string, string> = {};
@@ -59,8 +64,10 @@ class App {
 
         const response = await new Action(registry).execute();
 
-        return new Response(response.getOutput(), {
-            headers: { "Content-Type": response.contentType }
+        return new Response(response.content, {
+            headers: { ...response.headers }, 
+            status: response.statusCode,
+            statusText: response.statusText
         });
     }
 
@@ -104,6 +111,26 @@ class App {
         }
 
         return { body, files };
+    }
+
+    private async handleStaticFile(url: string): Promise<Response | null> {
+        const urlPath = new URL(url).pathname;
+        
+        const allowedDirs = ["/storage/cache", "/image"];
+        const isAllowed = allowedDirs.some(dir => urlPath.startsWith(dir));
+
+        if (!isAllowed) {
+            return null;
+        }
+
+        const filePath = `.${urlPath}`;
+        const file = Bun.file(filePath);
+
+        if (await file.exists()) {
+            return new Response(file);
+        }
+
+        return null;
     }
 }
 

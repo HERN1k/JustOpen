@@ -150,4 +150,11 @@ export class StringHelper {
         
         return d instanceof Date && !isNaN(d.getTime());
     }
+
+    static trimByChar(str: string, char: string): string {
+        const escapedChar = char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`^${escapedChar}+|${escapedChar}+$`, 'g');
+        
+        return str.replace(regex, '');
+    }
 }
