@@ -1,0 +1,13 @@
+<% /* Developed by Hirnyk Vlad (HERN1k) */ %>
+<% /** @layout props: IPageProps */ %>
+
+<%~ it.header %>
+
+<main>
+    <h2>Admin - Home page (Slider)</h2>
+    <div>
+        <%~ it.gallery %>
+    </div>
+</main>
+
+<%~ it.footer %>

@@ -34,7 +34,7 @@ export abstract class Controller {
      * Map of child components to be injected into the main view.
      * @protected
      */
-    protected components: Map<string, string> = new Map();
+    protected components: Record<string, any> = {};
 
     /**
      * The raw output buffer content.
@@ -159,7 +159,7 @@ export abstract class Controller {
      * @returns Promise resolving to the view content string.
      * @protected
      */
-    protected async loadView(path: string, data: Map<string, any> = new Map()): Promise<string> {
+    protected async loadView(path: string, data: Record<string, any> = {}): Promise<string> {
         return await Load.loadView(this.registry, path, data);
     }
 
@@ -170,7 +170,7 @@ export abstract class Controller {
      * @returns Promise resolving to the controller output string.
      * @protected
      */
-    protected async loadController(path: string, data: Map<string, string> = new Map()): Promise<string> {
+    protected async loadController(path: string, data: Record<string, any> = {}): Promise<string> {
         return await Load.loadController(this.registry, path, data);
     }
 

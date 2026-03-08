@@ -1,0 +1,24 @@
+<% /* Developed by Hirnyk Vlad (HERN1k) */ %>
+<% /** @layout props: LayoutProps */ %>
+
+<!DOCTYPE html>
+<html lang="<%= it.lang || 'en' %>">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= it.title || 'JustOpen 0.0.1' %></title>
+    
+    <base href="<%= it.stringHelper.trimByChar(it.HTTPS_BASE_URL, '/') %>/" />
+
+    <% it.css.forEach(function(style) { %>
+        <link rel="stylesheet" href="<%= style %>" />
+    <% }) %>
+</head>
+<body>
+    <%~ it.content %>
+
+    <% it.js.forEach(function(script) { %>
+        <script src="<%= script %>" defer></script>
+    <% }) %>
+</body>
+</html>

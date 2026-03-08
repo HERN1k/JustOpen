@@ -1,0 +1,38 @@
+<% /* Developed by Hirnyk Vlad (HERN1k) */ %>
+<% /** @layout props: IPageProps */ %>
+
+<% 
+  const images = it.images || [];
+  const firstImage = images[0] || "https://via.placeholder.com/800x400";
+%>
+
+<div class="slider-container js-slider" data-images="<%= JSON.stringify(images) %>">
+    <div class="slider-wrapper">
+        <img 
+            src="<%= firstImage %>" 
+            alt="Slide" 
+            class="slider-image js-slider-img"
+        />
+        
+        <div class="slider-controls">
+            <button class="control-btn js-prev">❮</button>
+            <button class="control-btn js-next">❯</button>
+        </div>
+
+        <div class="slider-dots js-dots">
+            <% images.forEach(function(_, i) { %>
+                <span 
+                    class="dot <%= i === 0 ? 'active' : '' %>" 
+                    data-index="<%= i %>">
+                </span>
+            <% }) %>
+        </div>
+    </div>
+    
+    <div class="slider-status">
+        <label>
+            <input type="checkbox" class="js-autoplay" checked />
+            <span>Auto Play</span>
+        </label>
+    </div>
+</div>

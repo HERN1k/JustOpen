@@ -2,7 +2,7 @@
 
 import { FileCache } from "../lib/cache/file";
 import { MemoryCache } from "../lib/cache/memory";
-import type { export ICacheDriver } from "./types";
+import type { ICacheDriver } from "./types";
 
 /**
  * List of available cache storage strategies.

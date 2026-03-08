@@ -1,0 +1,29 @@
+<% /* Developed by Hirnyk Vlad (HERN1k) */ %>
+<% /** @layout props: IPageProps */ %>
+
+<%~ it.header %>
+
+<div class="error-page">
+    <div class="error-content">
+        <h1 class="error-code">404</h1>
+        <div class="error-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M16 16s-1.5-2-4-2-4 2-4 2"></path>
+                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+            </svg>
+        </div>
+        <h2 class="error-title">Admin - Page not found</h2>
+        <p class="error-message">
+            Unfortunately, nothing was found at the requested address.<br>
+            The page may have been deleted or moved.
+        </p>
+        <div class="error-actions">
+            <a href="/" class="btn-home">Return to home page</a>
+            <button onclick="history.back()" class="btn-back">Back</button>
+        </div>
+    </div>
+</div>
+
+<%~ it.footer %>

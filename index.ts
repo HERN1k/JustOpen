@@ -7,6 +7,7 @@ import { Request as CustomRequest } from './system/core/request';
 import { Response as CustomResponse } from './system/core/response';
 import { DB } from './system/core/db';
 import { Render } from './system/core/render';
+import { Config } from './system/core/config';
 
 /**
  * Main Application Class to handle Bun server lifecycle and request processing.
@@ -25,7 +26,7 @@ class App {
             fetch: (req) => this.handleRequest(req),
         });
 
-        console.log(`\n🚀 JustOpen server running at ${BASE_URL}:${APP_PORT}\n`);
+        console.log(`\n🚀 JustOpen server running at ${BASE_URL}\n`);
     }
 
     /**
@@ -59,6 +60,8 @@ class App {
         registry.set('response', new CustomResponse());
 
         registry.set('db', new DB(DB_DRIVER, DB_CONFIG));
+
+        registry.set('config', new Config());
 
         registry.set('render', new Render(registry));
 

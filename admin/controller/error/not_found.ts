@@ -9,10 +9,13 @@ export class NotFoundController extends Controller {
     }
 
     async index() {
-        this.setPageData({ title: 'ADMIN Error 404' });
+        this.setPageData({ title: 'Admin - Error 404' });
 
-        this.components.set('header', await this.loadView('common/header'));
-        this.components.set('footer', await this.loadView('common/footer'));
+        this.setStyles('css/main.css');
+        this.setScript('js/main.js');
+
+        this.components['header'] = await this.loadView('common/header');
+        this.components['footer'] = await this.loadView('common/footer');
 
         // return await this.configureContent('common/home'); // for under controller
         

@@ -13,11 +13,11 @@ export class Load {
      * Returns the component definition (function or class) instead of the rendered element.
      * Useful for passing to rendering engines or storing in component registries.
      * * @param {Registry} registry - Application DI.
-     * @param {string} path - Path to the .tsx/.jsx file.
-     * @returns {Promise<ComponentType<any> | null>} The component type or null if not found.
+     * @param {string} path - Path to the .eta file.
+     * @returns {Promise<string>} The component type or null if not found.
      * * @protected
      */
-    public static async loadView(registry: Registry, path: string, data: Map<string, any>): Promise<string> {
+    public static async loadView(registry: Registry, path: string, data: Record<string, any>): Promise<string> {
         if (StringHelper.isNullOrWhiteSpace(path)) {
             return '';
         }
@@ -29,16 +29,7 @@ export class Load {
         const paths = this.parsePath(path, parser.path, request.layout);
 
         try {
-            const fileUrl = pathToFileURL(paths.fullFilePath).href;
-            
-            const module = await import(fileUrl);
-            if (typeof module[paths.action] === 'function') {
-                return await render.build(module[paths.action] as ComponentType<any>, data);
-            } else if (typeof module['default'] === 'function') {
-                return await render.build(module['default'] as ComponentType<any>, data);
-            }
-            
-            console.error(`[ViewLoader] Export "${paths.action}" is not a function in ${paths.fullFilePath}`);
+            return await render.build(pathToFileURL(paths.fullFilePath).href, data);
         } catch (error) {
             console.error(`[ViewLoader] Critical error loading ${paths.fullFilePath}:`, error);
         }
@@ -46,7 +37,7 @@ export class Load {
         return '';
     }
 
-    public static async loadController(registry: Registry, path: string, data: Map<string, string>): Promise<string> {
+    public static async loadController(registry: Registry, path: string, data: Record<string, any>): Promise<string> {
         if (StringHelper.isNullOrWhiteSpace(path)) {
             return '';
         }
@@ -91,7 +82,7 @@ export class Load {
         let action = 'index';
         let filePath = fullPath;
 
-        const fullFilePath = join(ROOT_DIR, catalogPath, 'view', layout, filePath + '.tsx');
+        const fullFilePath = join(ROOT_DIR, catalogPath, 'view', layout, filePath + '.eta');
 
         if (!existsSync(fullFilePath)) {
             if (parts.length > 1) {

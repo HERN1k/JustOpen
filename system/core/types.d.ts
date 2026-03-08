@@ -5,6 +5,7 @@ import type { Request } from "./request";
 import type { Response } from "./response";
 import type { DB } from "./db";
 import type { Render } from "./render";
+import type { Config } from "./config";
 
 /**
  * Props passed to the main application Layout component.
@@ -69,6 +70,8 @@ interface IRegistryData {
     response: Response;
     /** Database manager instance */
     db: DB;
+    /** Current HTTP request config */
+    config: Config,
     /** React render instance */
     render: Render;
     /** Allows dynamic registration of additional services or parameters */
@@ -201,5 +204,11 @@ interface IPageProps {
     data: Map<string, string>;
     get: (key: string) => string;
     any: (key: string) => any;
+    [key: string]: any;
+}
+
+interface IConfig {
+    theme: string;
+    lang: string;
     [key: string]: any;
 }

@@ -1,0 +1,6 @@
+<% /* Developed by Hirnyk Vlad (HERN1k) */ %>
+<% /** @layout props: IPageProps */ %>
+
+<footer>
+    <p>Admin - Footer</p>
+</footer>

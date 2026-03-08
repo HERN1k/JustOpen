@@ -1,30 +1,51 @@
-// Developed by HERN1k
+document.addEventListener('DOMContentLoaded', () => {
+    const slider = document.querySelector('.js-slider');
+    if (!slider) return;
 
-
-/**
- * JSDoc комментарий
- */
-async function testMinifier(data) {
-    const user = data?.profile?.name ?? "Anonymous"; // Optional chaining & Nullish coalescing
-
-    const longVariableNameWithManyCharacters = 42;
+    const img = slider.querySelector('.js-slider-img');
+    const nextBtn = slider.querySelector('.js-next');
+    const prevBtn = slider.querySelector('.js-prev');
+    const dotsContainer = slider.querySelector('.js-dots');
+    const autoplayCheck = slider.querySelector('.js-autoplay');
     
-    // Лишние пробелы и табуляции
-    if    (  longVariableNameWithManyCharacters    === 42  ) {
-        console.log("Result:", user);
-    }
+    const images = JSON.parse(slider.dataset.images || '[]');
+    let currentIndex = 0;
+    let interval = null;
 
-    const unusedVariable = "I should be removed if dead code elimination works";
+    const updateSlider = (index) => {
+        currentIndex = (index + images.length) % images.length;
+        
+        img.style.opacity = '0';
+        setTimeout(() => {
+            img.src = images[currentIndex];
+            img.style.opacity = '1';
+        }, 200);
 
-    const arrowFunc = async (a, b) => {
-        return await Promise.resolve(a + b);
+        slider.querySelectorAll('.dot').forEach((dot, i) => {
+            dot.classList.toggle('active', i === currentIndex);
+        });
     };
 
-    /* FIXME: Удалить этот консоль в продакшене */
-    console.log(`Template literal test: ${user}`);
-    
-    return arrowFunc(10, 20);
-}
+    const startAutoplay = () => {
+        stopAutoplay();
+        if (autoplayCheck.checked) {
+            interval = setInterval(() => updateSlider(currentIndex + 1), 5000);
+        }
+    };
 
-// Вызов функции с кучей пробелов в конце
-testMinifier({ profile: { name: "Vlad" } })   ;
+    const stopAutoplay = () => clearInterval(interval);
+
+    nextBtn.onclick = () => { updateSlider(currentIndex + 1); startAutoplay(); };
+    prevBtn.onclick = () => { updateSlider(currentIndex - 1); startAutoplay(); };
+    
+    dotsContainer.onclick = (e) => {
+        if (e.target.classList.contains('dot')) {
+            updateSlider(parseInt(e.target.dataset.index));
+            startAutoplay();
+        }
+    };
+
+    autoplayCheck.onchange = startAutoplay;
+    
+    startAutoplay();
+});
