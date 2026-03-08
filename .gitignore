@@ -6,9 +6,10 @@ out
 dist
 *.tgz
 
-# cache
+# cache logs images
+image/
 storage/cache/
-logs
+logs/
 
 # code coverage
 coverage
