@@ -7,6 +7,7 @@ import type { DB } from "./db";
 import type { Render } from "./render";
 import type { Config } from "./config";
 import type { Logger } from "./logger";
+import type { InternalURL } from "./url";
 
 /**
  * Props passed to the main application Layout component.
@@ -76,6 +77,8 @@ interface IRegistryData {
     config: Config,
     /** React render instance */
     render: Render;
+    /** URL builder instance */
+    url: InternalURL;
     /** Allows dynamic registration of additional services or parameters */
     [key: string]: any;
 }
@@ -259,3 +262,7 @@ interface IDiskInfo {
  * Supported output formats for image processing.
  */
 type ImageFormat = 'webp' | 'jpeg' | 'png' | 'avif';
+
+interface IRewriter {
+    rewrite(url: string): string;
+}

@@ -12,6 +12,8 @@ import { logger } from './system/core/logger';
 import { Formater } from './system/helper/formater';
 import { System } from './system/helper/system';
 import type { IAppStats } from './system/core/types';
+import { InternalURL } from './system/core/url';
+import { SeoUrl } from './system/core/seoUrl';
 
 /**
  * Main Application class responsible for the server lifecycle,
@@ -141,12 +143,29 @@ class App {
      * @private
      */
     private async processDynamicRequest(request: Request): Promise<Response> {
+        const url = new URL(request.url);
         const { body, files } = await this.parseRequestBody(request);
         
         const headers: Record<string, string> = {};
         request.headers.forEach((value, key) => { headers[key] = value; });
 
         const registry = new Registry();
+        const seoUrl = new SeoUrl(registry);
+        const internalUrl = new InternalURL().addRewrite(seoUrl);
+
+        // --- SEO URL DECODING START ---
+        const decoded = await seoUrl.decode(url.pathname);
+        
+        const getParams: Record<string, string> = {};
+        url.searchParams.forEach((v, k) => { getParams[k] = v; });
+
+        if (decoded) {
+            getParams['route'] = decoded.route;
+            Object.assign(getParams, decoded.params);
+        } else if (!getParams['route']) {
+            getParams['route'] = 'common/home';
+        }
+        // --- SEO URL DECODING END ---
         
         registry.set('logger', logger);
         registry.set('request', new CustomRequest(
@@ -156,11 +175,12 @@ class App {
             body,
             files,
             request.headers.get('cookie') || ''
-        ));
+        ).setGet(getParams));
         registry.set('response', new CustomResponse());
         registry.set('db', new DB(DB_DRIVER, DB_CONFIG));
         registry.set('config', new Config());
         registry.set('render', new Render(registry));
+        registry.set('url', internalUrl);
 
         const result = await new Action(registry).execute();
 

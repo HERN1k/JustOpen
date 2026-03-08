@@ -33,5 +33,6 @@ export const LOGS_DIR = join(CACHE_DIR, 'logs');
 
 export const CACHE_IMAGE_DIR = join(CACHE_DIR, 'image');
 
+export const DB_PREFIX: string = '';
 export const DB_DRIVER: DBDriverName = DBDriverName.MySQL;
 export const DB_CONFIG: string = '';

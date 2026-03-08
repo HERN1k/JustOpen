@@ -56,7 +56,18 @@ export class Request {
         this.parseCookies(cookiesStr);
         this.parsePost(body);
         this.parseFiles(files);
-        this._parserResult = this.parseUrl(urlStr);
+        
+        const url = new URL(urlStr, BASE_URL);
+        url.searchParams.forEach((value, key) => {
+            this.get[key] = this.clean(value);
+        });
+
+        this.refreshParser(url.pathname);
+    }
+
+    public setGet(params: Record<string, string>): void {
+        this.get = { ...this.get, ...params };
+        this.refreshParser();
     }
 
     /**
@@ -92,24 +103,47 @@ export class Request {
         };
     }
 
+    private refreshParser(pathname: string = ''): void {
+        const cleanPathname = pathname.replace(/^\/+|\/+$/g, '');
+        const isAdmin = cleanPathname.startsWith(ADMIN_DIR);
+        const currentAppPath = isAdmin ? ADMIN_DIR : CUSTOMERS_DIR;
+
+        let rawRoute = this.get['route'] || this._defaultRoute;
+        rawRoute = rawRoute.replace(/[^a-zA-Z0-9_\/]/g, '').replace(/\/+$/, '');
+
+        const parts = rawRoute.split('/');
+        
+        const folder = parts[0] || 'common';
+        const file = parts[1] || 'index';
+        const action = parts[2] || (parts.length > 1 ? this._defaultAction : 'index');
+
+        this._parserResult = {
+            isAdmin: isAdmin,
+            path: currentAppPath,
+            folder: folder,
+            file: file,
+            action: action,
+            route: `${folder}/${file}/${action}`
+        };
+    }
+
     /**
      * Processes raw files data into a standard UploadedFile interface.
      * @protected
      */
     private parseFiles(files: any): void {
-        if (!files) {
-            return;
-        }
+        if (!files) return;
 
         for (const key in files) {
             const file = files[key];
+            const fileName = file.originalFilename || file.name || 'unknown';
             
             this.files[key] = {
-                name: this.clean(file.originalFilename || file.name),
-                type: file.mimetype || file.type,
-                tmpName: file.filepath || file.tempFilePath,
-                size: file.size,
-                extension: (file.originalFilename || file.name).split('.').pop()?.toLowerCase() || '',
+                name: this.clean(fileName),
+                type: file.mimetype || file.type || 'application/octet-stream',
+                tmpName: file.filepath || file.tempFilePath || '',
+                size: file.size || 0,
+                extension: fileName.split('.').pop()?.toLowerCase() || '',
                 error: file.error || 0
             };
         }
@@ -151,14 +185,19 @@ export class Request {
      * @protected
      */
     private parseCookies(cookiesStr: string): void {
-        if (!cookiesStr) {
-            return;
-        }
+        if (!cookiesStr) return;
 
         cookiesStr.split(';').forEach(cookie => {
-            const [name, value] = cookie.split('=').map(c => c.trim());
+            const parts = cookie.split('=');
+            const name = parts.shift()?.trim();
+            const value = parts.join('=')?.trim();
+            
             if (name && value) {
-                this.cookie[name] = decodeURIComponent(value);
+                try {
+                    this.cookie[name] = decodeURIComponent(value);
+                } catch {
+                    this.cookie[name] = value;
+                }
             }
         });
     }
