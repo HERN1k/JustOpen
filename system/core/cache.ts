@@ -2,6 +2,7 @@
 
 import { FileCache } from "../lib/cache/file";
 import { MemoryCache } from "../lib/cache/memory";
+import { logger } from "./logger"; 
 import type { ICacheDriver } from "./types";
 
 /**
@@ -39,7 +40,9 @@ export class Cache {
                 this.driver = new FileCache(expire);
                 break;
             default:
-                throw new Error(`Error: Could not load cache driver: ${driverName}!`);
+                const errorMsg = `Could not load cache driver: ${driverName}`;
+                logger.error(errorMsg, "CACHE_INIT", "error");
+                throw new Error(errorMsg);
         }
     }
 
@@ -50,7 +53,12 @@ export class Cache {
      * @returns Promise resolving to true on success, false otherwise.
      */
     public async set(key: string, value: any): Promise<boolean> {
-        return await this.driver.set(key, value);
+        try {
+            return await this.driver.set(key, value);
+        } catch (err: any) {
+            logger.error(`Failed to set cache [${key}]: ${err.message}`, "CACHE_WRITE", "cache_error");
+            return false;
+        }
     }
 
     /**
@@ -59,18 +67,32 @@ export class Cache {
      * @returns Promise resolving to the stored value, or null if not found.
      */
     public async get<T>(key: string): Promise<T | null> {
-        const result = await this.driver.get<T>(key);
-        return result ?? null;
+        try {
+            const result = await this.driver.get<T>(key);
+            if (!result) {
+                // Optional: log cache misses if needed for debugging
+                // logger.info(`Cache miss: ${key}`, "CACHE_READ");
+            }
+            return result ?? null;
+        } catch (err: any) {
+            logger.error(`Failed to read cache [${key}]: ${err.message}`, "CACHE_READ", "cache_error");
+            return null;
+        }
     }
 
     /**
      * Gets all cached data from the current driver.
      * Useful for debugging or cache management tools.
-     * @returns Promise resolving to an object containing all cached items.
+     * @returns Promise resolving to an array containing cached items.
      */
     public async getAll(): Promise<Record<string, any>[]> {
-        const result = await this.driver.getAll();
-        return result ?? null;
+        try {
+            const result = await this.driver.getAll();
+            return result ?? [];
+        } catch (err: any) {
+            logger.error(`Failed to retrieve all cache data: ${err.message}`, "CACHE_READ", "cache_error");
+            return [];
+        }
     }
 
     /**
@@ -79,7 +101,12 @@ export class Cache {
      * @returns Promise resolving to true if deleted, false if key didn't exist.
      */
     public async remove(key: string): Promise<boolean> {
-        return await this.driver.remove(key);
+        try {
+            return await this.driver.remove(key);
+        } catch (err: any) {
+            logger.error(`Failed to remove cache [${key}]: ${err.message}`, "CACHE_DELETE", "cache_error");
+            return false;
+        }
     }
 
     /**
@@ -88,24 +115,36 @@ export class Cache {
      * @returns Promise resolving to true on successful clearance.
      */
     public async clear(): Promise<boolean> {
-        return await this.driver.clear();
+        try {
+            const result = await this.driver.clear();
+            logger.warn(`Cache storage cleared successfully`, "CACHE_MGMT");
+            return result;
+        } catch (err: any) {
+            logger.error(`Failed to clear cache: ${err.message}`, "CACHE_MGMT", "cache_error");
+            return false;
+        }
     }
 
     /**
      * DANGER: Calls a driver-specific method by its name.
      * This allows access to unique features like 'removeByPattern' in FileCache.
-     * * @param methodName - The name of the method to execute.
+     * @param methodName - The name of the method to execute.
      * @param args - Arguments to pass to the method.
      * @returns The result of the method call.
      * @throws Error if the method does not exist on the current driver.
      */
     public async callCustomMethod(methodName: string, ...args: any[]): Promise<any> {
-        if (typeof this.driver[methodName] === 'function') {
-            return await this.driver[methodName](...args);
+        if (typeof (this.driver as any)[methodName] === 'function') {
+            try {
+                return await (this.driver as any)[methodName](...args);
+            } catch (err: any) {
+                logger.error(`Custom method execution failed [${methodName}]: ${err.message}`, "CACHE_CUSTOM", "cache_error");
+                throw err;
+            }
         }
 
-        throw new Error(
-            `[Cache] Method '${methodName}' is not supported by the current driver.`
-        );
+        const msg = `[Cache] Method '${methodName}' is not supported by the current driver.`;
+        logger.error(msg, "CACHE_CUSTOM", "error");
+        throw new Error(msg);
     }
 }

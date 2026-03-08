@@ -2,6 +2,7 @@
 
 import { Controller } from "../../../system/core/controller";
 import type { Registry } from "../../../system/core/registry";
+import { Image } from "../../../system/helper/image";
 
 export class HomeController extends Controller {
     constructor(registry: Registry) {
@@ -16,11 +17,13 @@ export class HomeController extends Controller {
 
         this.components['gallery'] = await this.loadView('extension/module/slider', {
             'images': [
-                "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
-                "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80",
-                "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80",
-                "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80",
-                "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=1200&q=80",
+                await Image.banner('catalog/temp/photo-1.jpg'),
+                await Image.banner('catalog/temp/photo-2.avif'),
+                await Image.banner('catalog/temp/photo-3.avif'),
+                await Image.banner('catalog/temp/photo-4.avif'),
+                await Image.banner('catalog/temp/photo-5.avif'),
+                await Image.banner('catalog/temp/photo-6.avif'),
+                await Image.banner('catalog/temp/photo-0.svg')
             ]
         });
 

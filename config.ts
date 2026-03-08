@@ -25,7 +25,13 @@ export const ADMIN_DIR_CONTROLLERS: string = join(ROOT_DIR, `${ADMIN_DIR}/contro
 export const ADMIN_DIR_MODELS: string = join(ROOT_DIR, `${ADMIN_DIR}/model`);
 export const ADMIN_DIR_VIEW: string = join(ROOT_DIR, `${ADMIN_DIR}/view`);
 
-export const CACHE_DIR = join(ROOT_DIR, "storage/cache");
+export const IMAGE_DIR = join(ROOT_DIR, 'image');
+
+export const CACHE_DIR = join(ROOT_DIR, 'storage/cache');
+
+export const LOGS_DIR = join(CACHE_DIR, 'logs');
+
+export const CACHE_IMAGE_DIR = join(CACHE_DIR, 'image');
 
 export const DB_DRIVER: DBDriverName = DBDriverName.MySQL;
 export const DB_CONFIG: string = '';

@@ -6,6 +6,10 @@ out
 dist
 *.tgz
 
+# cache
+storage/cache/
+logs
+
 # code coverage
 coverage
 *.lcov

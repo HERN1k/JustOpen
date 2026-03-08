@@ -1,6 +1,7 @@
 // Developed by Hirnyk Vlad (HERN1k)
 
 import { MySQLi } from "../lib/db/mysqli";
+import { logger } from "./logger"; 
 import type { IDBDriver, IDBResult } from "./types";
 
 /**
@@ -12,40 +13,66 @@ export enum DBDriverName {
 
 /**
  * Database class providing a unified interface for different storage engines.
+ * Handles query execution, data escaping, and connection lifecycle.
  */
 export class DB {
+    /**
+     * The active database driver instance.
+     * @private
+     */
     private driver: IDBDriver;
 
     /**
-     * @param driver One of the supported DBDriverName values
-     * @param config Connection configuration object
+     * Initializes the database connection using the specified driver.
+     * @param driver - One of the supported DBDriverName values.
+     * @param config - Connection configuration object (host, user, pass, etc.).
+     * @throws Error if the driver fails to initialize or is not supported.
      */
     constructor(driver: DBDriverName, config: any) {
-        switch (driver) {
-            case DBDriverName.MySQL:
-                this.driver = new MySQLi(config);
-                break;
-            default:
-                throw new Error(`Error: Could not load database driver!`);
+        try {
+            switch (driver) {
+                case DBDriverName.MySQL:
+                    this.driver = new MySQLi(config);
+                    break;
+                default:
+                    const errorMsg = `Database driver '${driver}' is not supported.`;
+                    logger.error(errorMsg, "DB_INIT", "error");
+                    throw new Error(errorMsg);
+            }
+        } catch (err: any) {
+            logger.error(`Database connection failed: ${err.message}`, "DB_CONNECTION", "error");
+            throw err;
         }
     }
 
     /**
-     * Executes a SQL query.
+     * Executes a raw SQL query through the active driver.
+     * Logs the query on failure to the sql_error log.
+     * @param sql - The SQL statement to execute.
+     * @returns Promise resolving to the driver-specific result object.
      */
     public async query(sql: string): Promise<IDBResult> {
-        return await this.driver.query(sql);
+        try {
+            return await this.driver.query(sql);
+        } catch (err: any) {
+            // Log the specific SQL error and the query that caused it for debugging
+            logger.error(`SQL Error: ${err.message} | Query: ${sql}`, "DB_QUERY", "sql_error");
+            throw err;
+        }
     }
 
     /**
-     * Escapes a string to prevent SQL injection.
+     * Escapes a string value to prevent SQL injection attacks.
+     * @param value - The raw string to escape.
+     * @returns The sanitized string.
      */
     public escape(value: string): string {
         return this.driver.escape(value);
     }
 
     /**
-     * Gets the ID of the last inserted row.
+     * Retrieves the auto-generated ID from the last INSERT operation.
+     * @returns The last insertion ID as a number.
      */
     public getLastId(): number {
         return this.driver.getLastId();

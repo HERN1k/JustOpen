@@ -6,6 +6,7 @@ import type { Response } from "./response";
 import type { DB } from "./db";
 import type { Render } from "./render";
 import type { Config } from "./config";
+import type { Logger } from "./logger";
 
 /**
  * Props passed to the main application Layout component.
@@ -15,11 +16,11 @@ type LayoutProps = {
     title: string; 
     /** ISO language code for the HTML lang attribute (e.g., 'en', 'uk') */
     lang: string;
-    /** Raw HTML content */
+    /** Raw HTML content or rendered string from React components */
     content: string;
-
+    /** Array of CSS file paths to be included in the <head> */
     css: Array<string>;
-    
+    /** Array of JS file paths to be included before </body> */
     js: Array<string>;
 };
 
@@ -28,6 +29,7 @@ type LayoutProps = {
  * Contains decomposed information about the current URL.
  */
 type ParserResult = {
+    /** Flag indicating if the request belongs to the administrative panel */
     isAdmin: boolean;
     /** Application root directory: 'admin' or 'catalog' */
     path: string;
@@ -123,15 +125,7 @@ interface ICacheDriver {
     clear(): boolean | Promise<boolean>;
 
     /**
-     * DANGER: Access to driver-specific methods not defined in the base interface.
-     * @description
-     * This index signature allows calling methods like 'removeByPattern' on drivers 
-     * that support them. 
-     * @warning
-     * 1. Bypasses TypeScript type safety.
-     * 2. Methods may not exist across all drivers (leads to runtime errors).
-     * 3. Breaks the Abstraction principle.
-     * Always check if the method exists: `if (typeof driver['method'] === 'function')`
+     * Index signature for driver-specific methods.
      */
     [key: string]: any;
 }
@@ -200,15 +194,68 @@ export type RenderComponentOptions = {
     priority?: number;
 };
 
+/**
+ * Standard properties passed to React Page components.
+ */
 interface IPageProps {
+    /** Storage for key-value string data */
     data: Map<string, string>;
+    /** Helper to retrieve string data */
     get: (key: string) => string;
+    /** Helper to retrieve data of any type */
     any: (key: string) => any;
+    /** Support for dynamic properties */
     [key: string]: any;
 }
 
+/**
+ * Global application configuration settings.
+ */
 interface IConfig {
+    /** Current active theme name */
     theme: string;
+    /** Current active system language */
     lang: string;
+    /** Additional configuration entries */
     [key: string]: any;
 }
+
+/**
+ * Application performance and usage statistics.
+ */
+interface IAppStats {
+    /** Cumulative number of requests processed since startup */
+    totalRequests: number;
+    /** Counter for HTTP methods (GET, POST, etc.) */
+    methods: Record<string, number>;
+    /** Counter for HTTP status codes returned */
+    statusCodes: Record<number, number>;
+    /** Server startup time (Unix Timestamp) */
+    startTime: number;
+    /** Unique visitor IP addresses */
+    uniqueIps: Set<string>;
+    /** Detailed per-IP activity log */
+    ipActivity: Record<string, {
+        count: number,
+        lastUrl: string,
+        lastMethod: string,
+        lastSeen: string
+    }>;
+}
+
+/**
+ * Server disk usage information.
+ */
+interface IDiskInfo {
+    /** Total disk capacity */
+    total: string;
+    /** Available free space */
+    free: string;
+    /** Percentage of used disk space */
+    usedPercent: string;
+}
+
+/**
+ * Supported output formats for image processing.
+ */
+type ImageFormat = 'webp' | 'jpeg' | 'png' | 'avif';

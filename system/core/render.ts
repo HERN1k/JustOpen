@@ -3,8 +3,8 @@
 import { Eta } from "eta";
 import { minify } from "html-minifier-terser";
 import { StringHelper } from "../helper/string";
-import { CACHE_DIR, HTTPS_BASE_URL, ROOT_DIR } from "../../config";
-import { join, parse } from 'path';
+import { ADMIN_DIR, CACHE_DIR, CUSTOMERS_DIR, HTTPS_BASE_URL, ROOT_DIR } from "../../config";
+import { join, parse, sep } from 'path';
 import { transformSync } from "@babel/core";
 import postcss from "postcss";
 import autoprefixer from "autoprefixer";
@@ -36,6 +36,13 @@ export class Render {
     }
 
     /**
+     * Shortcut to access the system logger.
+     */
+    private get logger() {
+        return this.registry.get('logger');
+    }
+
+    /**
      * Set data for the specific request context.
      * @param data - Key-value pairs of data to be available in templates.
      */
@@ -46,7 +53,7 @@ export class Render {
     /**
      * Renders the main layout template with provided content.
      * Integrates processed assets and wraps the content into the final HTML structure.
-     * * @param content - The pre-rendered HTML content of the page body (from build() method).
+     * @param content - The pre-rendered HTML content of the page body.
      * @returns Minified full HTML string with DOCTYPE.
      */
     public async getPage(content: string): Promise<string> {
@@ -61,8 +68,8 @@ export class Render {
             const layoutFile = Bun.file(layoutPath);
 
             if (!(await layoutFile.exists())) {
-                console.error(`[ViewLoader] Layout file not found: ${layoutPath}`);
-                return content; // Return raw content if layout is missing
+                this.logger.error(`Layout file not found: ${layoutPath}`, "VIEW_LOADER", "render_error");
+                return content; 
             }
 
             request.layout = layoutName;
@@ -89,15 +96,15 @@ export class Render {
 
             return await this.minifyHTML(rawHTML);
 
-        } catch (error) {
-            console.error(`[ViewLoader] Critical error rendering layout at ${layoutPath}:`, error);
+        } catch (error: any) {
+            this.logger.error(`Critical rendering error at ${layoutPath}: ${error.message}`, "RENDER_ENGINE", "render_error");
             return content;
         }
     }
 
     /**
      * Renders a specific template using a plain object for data.
-     * * @param templatePath - Absolute path to the .eta file.
+     * @param templatePath - Absolute path to the .eta file.
      * @param data - Plain object containing template variables.
      * @returns Minified HTML string or empty string if template not found.
      */
@@ -107,18 +114,16 @@ export class Render {
         const file = Bun.file(templatePath);
         
         if (!(await file.exists())) {
-            console.error(`[Render] Template file not found at: ${templatePath}`);
+            this.logger.error(`Template file not found at: ${templatePath}`, "RENDER_BUILD");
             return '';
         }
 
         try {
             const templateSource = await file.text();
-
-            const rawHTML = this.eta.renderString(templateSource, this.configureData(data));
-
+            const rawHTML = await this.eta.renderStringAsync(templateSource, this.configureData(data));
             return await this.minifyHTML(rawHTML);
-        } catch (error) {
-            console.error(`[Render] Error building template ${templatePath}:`, error);
+        } catch (error: any) {
+            this.logger.error(`Error building template ${templatePath}: ${error.message}`, "RENDER_BUILD", "render_error");
             return '';
         }
     }
@@ -138,29 +143,51 @@ export class Render {
      * @returns Web-accessible path to the cached/minified file.
      */
     private async processedAsset(sourcePath: string, type: 'css' | 'js'): Promise<string> {
-        const sourceFile = Bun.file(sourcePath);
-        
-        if (!(await sourceFile.exists())) {
-            console.error(`Source file not found: ${sourcePath}`);
+        const layoutName: string = this.registry.get('config').get('theme') || 'theme';
+
+        if (!sourcePath.includes(layoutName)) {
+            this.logger.warn(`Source file not found in theme: ${sourcePath}`, "ASSET_LOADER");
             return sourcePath;
         }
 
-        const { name, ext } = parse(sourcePath); 
-        const fileName = `${name}.min${ext}`;
-        const webPath = `/storage/cache/${type}/${fileName}`;
-        const cachePath = join(CACHE_DIR, type, fileName);
+        const sourceFile = Bun.file(sourcePath);
+        if (!(await sourceFile.exists())) {
+            this.logger.error(`Asset source file missing: ${sourcePath}`, "ASSET_LOADER");
+            return sourcePath;
+        }
+
+        const { name, ext, dir } = parse(sourcePath);
+        const isAdmin = this.registry.get('request').getParserResult().isAdmin;
+        const baseDir = isAdmin ? ADMIN_DIR : CUSTOMERS_DIR;
+
+        const srcIndex = dir.indexOf(`${sep}src`);
+        if (srcIndex === -1) {
+            this.logger.error(`Invalid asset path structure: ${sourcePath}`, "ASSET_LOADER");
+            return sourcePath;
+        }
+
+        const relativeFolder = dir.substring(srcIndex + 1).replaceAll(sep, '/');
+        const minFileName = `${name}.min${ext}`;
+
+        const webPath = `/storage/cache/${baseDir}/${relativeFolder}/${minFileName}?v=${sourceFile.lastModified}`;
+        const cachePath = join(CACHE_DIR, baseDir, relativeFolder, minFileName);
         const cacheFile = Bun.file(cachePath);
 
         const needsUpdate = !(await cacheFile.exists()) || (sourceFile.lastModified > cacheFile.lastModified);
 
         if (needsUpdate) {
-            const content = await sourceFile.text();
-            const minified = type === 'css' 
-                ? await this.minifyCSS(content) 
-                : await this.minifyJS(content);
+            try {
+                const content = await sourceFile.text();
+                const minified = type === 'css' 
+                    ? await this.minifyCSS(content) 
+                    : await this.minifyJS(content);
 
-            await Bun.write(cachePath, minified);
-            console.log(`[Cache] Minified and saved: ${cachePath}`);
+                await Bun.write(cachePath, minified);
+                this.logger.info(`Asset minified and cached: ${minFileName}`, "CACHE");
+            } catch (error: any) {
+                this.logger.error(`Minification failed for ${sourcePath}: ${error.message}`, "MINIFY", "error");
+                return sourcePath;
+            }
         }
 
         return webPath;
@@ -170,15 +197,20 @@ export class Render {
      * Helper to minify HTML content.
      */
     private async minifyHTML(html: string): Promise<string> {
-        return await minify(html, {
-            collapseWhitespace: true,
-            removeComments: true,
-            minifyJS: true,
-            minifyCSS: true,
-            processConditionalComments: true,
-            removeAttributeQuotes: false,
-            removeEmptyAttributes: true
-        });
+        try {
+            return await minify(html, {
+                collapseWhitespace: true,
+                removeComments: true,
+                minifyJS: true,
+                minifyCSS: true,
+                processConditionalComments: true,
+                removeAttributeQuotes: false,
+                removeEmptyAttributes: true
+            });
+        } catch (e: any) {
+            this.logger.warn(`HTML Minification skipped: ${e.message}`, "RENDER");
+            return html;
+        }
     }
     
     /**
@@ -231,6 +263,9 @@ export class Render {
         return await build.outputs[0]?.text() ?? codeToMinify;
     }
 
+    /**
+     * Sanitizes paths for different operating systems.
+     */
     private cleanPath(path: string): string {
         let result = path.replace(/^file:\/\/\/?/, '');
         

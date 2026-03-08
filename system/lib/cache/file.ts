@@ -213,7 +213,6 @@ export class FileCache implements ICacheDriver {
 
             return true;
         } catch (error) {
-            console.error(`[FileCache] Error during removeByPattern:`, error);
             return false;
         }
     }

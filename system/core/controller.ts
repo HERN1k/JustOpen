@@ -4,6 +4,7 @@ import { Registry } from "./registry";
 import { Request } from "./request";
 import { Response } from "./response";
 import { Render } from "../../system/core/render";
+import { Logger } from "../../system/core/logger"; 
 import { Load } from "../helper/load";
 import { DIR_VIEW, ADMIN_DIR_VIEW } from "../../config";
 import { join } from 'path';
@@ -31,27 +32,18 @@ export abstract class Controller {
     };
 
     /**
-     * Map of child components to be injected into the main view.
+     * Map of child components (other controllers or views) to be injected.
      * @protected
      */
     protected components: Record<string, any> = {};
 
-    /**
-     * The raw output buffer content.
-     * @protected
-     */
+    /** @protected */
     protected content: string;
 
-    /**
-     * The MIME type of the response.
-     * @protected
-     */
+    /** @protected */
     protected contentType: string;
 
-    /**
-     * The HTTP status code (e.g., 200, 404).
-     * @protected
-     */
+    /** @protected */
     protected statusCode: number;
 
     /**
@@ -67,36 +59,32 @@ export abstract class Controller {
         this.statusCode = response.statusCode;
     }
 
-    /**
-     * Provides access to the Request object (GET, POST, Cookies, etc.).
-     * @protected
-     */
+    /** @protected */
     protected get request(): Request {
         return this.registry.get('request');
     }
 
-    /**
-     * Provides access to the Database connection.
-     * @protected
-     */
+    /** @protected */
     protected get db() {
         return this.registry.get('db');
     }
 
-    /**
-     * Provides access to the Render engine for React/Template processing.
-     * @protected
-     */
+    /** @protected */
     protected get render(): Render {
         return this.registry.get('render');
     }
 
-    /**
-     * Provides access to the Response object to manage headers and buffer.
-     * @protected
-     */
+    /** @protected */
     protected get response(): Response {
         return this.registry.get('response');
+    }
+
+    /**
+     * Access the system logger.
+     * @protected
+     */
+    protected get logger(): Logger {
+        return this.registry.get('logger');
     }
 
     /**
@@ -108,55 +96,53 @@ export abstract class Controller {
         this.pageData = { ...this.pageData, ...data };
     }
 
+    /**
+     * Resolves and adds a CSS path to the page headers.
+     * @param path Relative path to the CSS file.
+     * @protected
+     */
     protected async setStyles(path: string): Promise<void> {
-        // get layout name from db
-        const layoutName: string = 'theme';
-
+        const layoutName: string = this.registry.get('config').get('theme') || 'theme';
         const parser = this.request.getParserResult();
 
-        const index = path.indexOf('src');
-        if (index !== -1) {
-            path = path.substring(index);
-        } else {
-            path = 'src/' + path;
+        // Normalize path to include 'src/'
+        if (!path.includes('src')) {
+            path = join('src', path);
         }
 
-        path = parser.isAdmin 
-            ? join(ADMIN_DIR_VIEW , layoutName, path)
-            : join(DIR_VIEW, layoutName, path);
-
-        if (!this.pageData.css.includes(path)) {
-            this.pageData.css.push(path);
-        }
-    }
-
-    protected async setScript(path: string): Promise<void> {
-        // get layout name from db
-        const layoutName: string = 'theme';
-
-        const parser = this.request.getParserResult();
-
-        const index = path.indexOf('src');
-        if (index !== -1) {
-            path = path.substring(index);
-        } else {
-            path = 'src/' + path;
-        }
-
-        path = parser.isAdmin 
+        const fullPath = parser.isAdmin 
             ? join(ADMIN_DIR_VIEW, layoutName, path)
             : join(DIR_VIEW, layoutName, path);
 
-        if (!this.pageData.js.includes(path)) {
-            this.pageData.js.push(path);
+        if (!this.pageData.css.includes(fullPath)) {
+            this.pageData.css.push(fullPath);
+        }
+    }
+
+    /**
+     * Resolves and adds a JS path to the page footer.
+     * @param path Relative path to the JS file.
+     * @protected
+     */
+    protected async setScript(path: string): Promise<void> {
+        const layoutName: string = this.registry.get('config').get('theme') || 'theme';
+        const parser = this.request.getParserResult();
+
+        if (!path.includes('src')) {
+            path = join('src', path);
+        }
+
+        const fullPath = parser.isAdmin 
+            ? join(ADMIN_DIR_VIEW, layoutName, path)
+            : join(DIR_VIEW, layoutName, path);
+
+        if (!this.pageData.js.includes(fullPath)) {
+            this.pageData.js.push(fullPath);
         }
     }
 
     /**
      * Loads a view template string.
-     * @param path Path to the view file.
-     * @param data Optional map of components or data.
-     * @returns Promise resolving to the view content string.
      * @protected
      */
     protected async loadView(path: string, data: Record<string, any> = {}): Promise<string> {
@@ -164,23 +150,11 @@ export abstract class Controller {
     }
 
     /**
-     * Loads and executes another controller internally.
-     * @param path Controller path.
-     * @param data Optional initialization data.
-     * @returns Promise resolving to the controller output string.
+     * Loads and executes another controller internally (Sub-controller pattern).
      * @protected
      */
     protected async loadController(path: string, data: Record<string, any> = {}): Promise<string> {
         return await Load.loadController(this.registry, path, data);
-    }
-
-    /**
-     * Prepares content by loading a view with the registered components.
-     * @param path Path to the content template.
-     * @protected
-     */
-    protected async configureContent(path: string): Promise<string> {
-        return await Load.loadView(this.registry, path, this.components);
     }
 
     /**
@@ -190,18 +164,21 @@ export abstract class Controller {
      * @protected
      */
     protected async configurePage(path: string, statusCode: number = 200): Promise<void> {
-        this.render.setPageData(this.pageData);
+        try {
+            this.render.setPageData(this.pageData);
 
-        const viewContent = await this.loadView(path, this.components);
-        const renderedPage = await this.render.getPage(viewContent);
-        
-        this.rowResponse(renderedPage, "text/html; charset=utf-8", statusCode);
+            const viewContent = await this.loadView(path, this.components);
+            const renderedPage = await this.render.getPage(viewContent);
+            
+            this.rowResponse(renderedPage, "text/html; charset=utf-8", statusCode);
+        } catch (error: any) {
+            this.logger.error(`Failed to configure page [${path}]: ${error.message}`, "CONTROLLER");
+            throw error;
+        }
     }
 
     /**
      * Helper to prepare a JSON response.
-     * @param data Data to be stringified.
-     * @param statusCode HTTP status code. Defaults to 200.
      * @protected
      */
     protected JSON(data: any = {}, statusCode: number = 200): void {
@@ -214,10 +191,6 @@ export abstract class Controller {
 
     /**
      * Directly sets the raw response properties.
-     * @param response The body content.
-     * @param contentType MIME type.
-     * @param statusCode HTTP status code.
-     * @param statusText Custom status text.
      * @protected
      */
     protected rowResponse(
@@ -232,13 +205,12 @@ export abstract class Controller {
 
     /**
      * Lifecycle method called before the main action execution.
-     * Can be overridden to perform initialization logic.
      */
     public async onEnter(): Promise<void> { }
 
     /**
      * Lifecycle method called after the action execution.
-     * Synchronizes local controller state with the global Response object.
+     * Finalizes and pushes data to the main Response service.
      */
     public async onLeave(): Promise<void> {
         this.response.setOutput(this.content, this.contentType, this.statusCode);
