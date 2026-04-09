@@ -6,33 +6,33 @@
   const firstImage = images[0] || "https://via.placeholder.com/800x400";
 %>
 
-<div class="slider-container js-slider" data-images="<%= JSON.stringify(images) %>">
-    <div class="slider-wrapper">
+<div class="max-w-[900px] mx-auto my-8 font-sans js-slider" data-images="<%= JSON.stringify(images) %>">
+    <div class="relative aspect-video rounded-[20px] overflow-hidden bg-[#2d3436] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] border border-white/5">
         <img 
             src="<%= firstImage %>" 
             alt="Slide" 
-            class="slider-image js-slider-img"
+            class="w-full h-full object-cover transition-opacity duration-300 js-slider-img"
         />
         
-        <div class="slider-controls">
-            <button class="control-btn js-prev">❮</button>
-            <button class="control-btn js-next">❯</button>
+        <div class="absolute inset-0 flex items-center justify-between px-5 pointer-events-none">
+            <button class="pointer-events-auto w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xl flex items-center justify-center transition-all hover:bg-[#6c5ce7] hover:scale-110 js-prev">❮</button>
+            <button class="pointer-events-auto w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xl flex items-center justify-center transition-all hover:bg-[#6c5ce7] hover:scale-110 js-next">❯</button>
         </div>
 
-        <div class="slider-dots js-dots">
+        <div class="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-3 px-5 py-2.5 bg-black/30 backdrop-blur-sm rounded-full js-dots">
             <% images.forEach(function(_, i) { %>
                 <span 
-                    class="dot <%= i === 0 ? 'active' : '' %>" 
+                    class="dot cursor-pointer transition-all duration-300 h-2.5 rounded-full <%= i === 0 ? 'w-6 bg-[#6c5ce7]' : 'w-2.5 bg-white/40' %>" 
                     data-index="<%= i %>">
                 </span>
             <% }) %>
         </div>
     </div>
     
-    <div class="slider-status">
-        <label>
-            <input type="checkbox" class="js-autoplay" checked />
-            <span>Auto Play</span>
+    <div class="mt-4 flex justify-center">
+        <label class="flex items-center gap-2 cursor-pointer group">
+            <input type="checkbox" class="w-[18px] h-[18px] accent-[#6c5ce7] cursor-pointer js-autoplay" checked />
+            <span class="text-[#94a3b8] text-sm tracking-wide group-hover:text-[#6c5ce7] transition-colors">Auto Play</span>
         </label>
     </div>
 </div>

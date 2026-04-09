@@ -11,9 +11,6 @@ export class NotFoundController extends Controller {
     async index() {
         this.setPageData({ title: 'Error 404' });
 
-        this.setStyles('css/main.css');
-        this.setScript('js/main.js');
-
         this.components['header'] = await this.loadView('common/header');
         this.components['footer'] = await this.loadView('common/footer');
 

@@ -3,21 +3,27 @@
 import { Eta } from "eta";
 import { minify } from "html-minifier-terser";
 import { StringHelper } from "../helper/string";
-import { ADMIN_DIR, CACHE_DIR, CUSTOMERS_DIR, HTTPS_BASE_URL, ROOT_DIR } from "../../config";
+import { ADMIN_DIR, CACHE_DIR, CUSTOMERS_DIR, HTTPS_BASE_URL, ROOT_DIR, ADMIN_DIR_VIEW, DIR_VIEW } from "../../config";
 import { join, parse, sep } from 'path';
 import { transformSync } from "@babel/core";
 import postcss from "postcss";
 import autoprefixer from "autoprefixer";
 import { transform } from "lightningcss";
 import type { Registry } from "./registry";
+import type { IHeadContent } from "./types";
 
 /**
  * Core Rendering Engine using Eta templates.
  * Handles template execution, asset minification, and caching.
  */
 export class Render {
+    /** @private System registry instance */
     private registry: Registry;
+    /** @private Eta instance for template rendering */
     private eta: Eta;
+    /** @private List of filenames that should skip the minification process */
+    private notMinifyFileNames: Array<string> = ['lucide'];
+    /** @private Container for assets to be injected into the layout */
     private pageData: Record<string, any> = {
         'css': [],
         'js': []
@@ -72,11 +78,15 @@ export class Render {
                 return content; 
             }
 
+            await this.processFonts();
+
+            const headContent = await this.headContent();
+
             request.layout = layoutName;
             
             const [processedCss, processedJs] = await Promise.all([
-                Promise.all((this.pageData.css as string[]).map(css => this.processedAsset(css, 'css'))),
-                Promise.all((this.pageData.js as string[]).map(js => this.processedAsset(js, 'js')))
+                Promise.all((this.pageData.css as string[]).map(css => this.processAsset(css, 'css'))),
+                Promise.all((this.pageData.js as string[]).map(js => this.processAsset(js, 'js'))),
             ]);
 
             const renderData = this.configureData({
@@ -84,6 +94,7 @@ export class Render {
                 css: processedCss,
                 js: processedJs,
                 lang: 'uk',
+                head: headContent,
                 content: content
             });
 
@@ -128,6 +139,11 @@ export class Render {
         }
     }
 
+    /**
+     * Injects global helper methods and constants into the template data.
+     * @param data - Original data object.
+     * @returns Merged data object with helpers.
+     */
     private configureData(data: Record<string, any>): Record<string, any> {
         return {
             ...data,
@@ -137,12 +153,119 @@ export class Render {
     }
 
     /**
+     * Scans the theme's font directory and copies new or updated fonts to the cache.
+     * Uses Bun.Glob for efficient file discovery.
+     * @returns Promise<void>
+     */
+    private async processFonts(): Promise<void> {
+        const layoutName: string = this.registry.get('config').get('theme') || 'theme';
+        const parser = this.registry.get('request').getParserResult();
+        const baseDir = parser.isAdmin ? ADMIN_DIR : CUSTOMERS_DIR;
+        const fullPath = parser.isAdmin 
+            ? join(ADMIN_DIR_VIEW, layoutName, 'src', 'fonts')
+            : join(DIR_VIEW, layoutName, 'src', 'fonts');
+
+        const glob = new Bun.Glob("**/*");
+
+        for await (const sourcePath of glob.scan({ cwd: fullPath, absolute: true })) {
+            const sourceFile = Bun.file(sourcePath);
+            const { name, ext, dir } = parse(sourcePath);
+
+            const srcIndex = dir.indexOf(`${sep}src`);
+
+            if (srcIndex === -1) {
+                continue;
+            }
+
+            const relativeFolder = dir.substring(srcIndex + 1).replaceAll(sep, '/');
+            
+            const cachePath = join(CACHE_DIR, baseDir, relativeFolder, `${name}${ext}`);
+            const cacheFile = Bun.file(cachePath);
+
+            const needsUpdate = !(await cacheFile.exists()) || (sourceFile.lastModified > cacheFile.lastModified);
+
+            if (needsUpdate) {
+                try {
+                    await Bun.write(cachePath, sourceFile);
+                    this.logger.info(`Font copied to cache: ${name}${ext}`, "CACHE");
+                } catch (error: any) {
+                    this.logger.error(`Failed to copy font ${name}${ext}: ${error.message}`, "FONTS");
+                }
+            }
+        }
+    }
+
+    /**
+     * Scans the 'head' directory, copies icons/manifest to cache, 
+     * and returns web-accessible paths for the layout.
+     * @returns Promise<IHeadContent>
+     */
+    private async headContent(): Promise<IHeadContent> {
+        const layoutName: string = this.registry.get('config').get('theme') || 'theme';
+        const parser = this.registry.get('request').getParserResult();
+        const baseDir = parser.isAdmin ? ADMIN_DIR : CUSTOMERS_DIR;
+        const fullPath = parser.isAdmin 
+            ? join(ADMIN_DIR_VIEW, layoutName, 'src', 'head')
+            : join(DIR_VIEW, layoutName, 'src', 'head');
+
+        const glob = new Bun.Glob("**/*");
+
+        const result: IHeadContent = {
+            androidSmall: '',
+            androidBig: '',
+            apple: '',
+            faviconSmall: '',
+            faviconBig: '',
+            faviconIco: '',
+            webManifest: '',
+        };
+
+        for await (const sourcePath of glob.scan({ cwd: fullPath, absolute: true })) {
+            const sourceFile = Bun.file(sourcePath);
+            const { name, ext, dir } = parse(sourcePath);
+            const fileName = `${name}${ext}`;
+
+            const srcIndex = dir.indexOf(`${sep}src`);
+
+            if (srcIndex === -1) {
+                continue;
+            }
+
+            const relativeFolder = dir.substring(srcIndex + 1).replaceAll(sep, '/');
+            
+            const webPath = `/storage/cache/${baseDir}/${relativeFolder}/${fileName}?v=${sourceFile.lastModified}`;
+            const cachePath = join(CACHE_DIR, baseDir, relativeFolder, `${fileName}`);
+            const cacheFile = Bun.file(cachePath);
+
+            if (fileName === 'android-chrome-192x192.png') result.androidSmall = webPath;
+            else if (fileName === 'android-chrome-512x512.png') result.androidBig = webPath;
+            else if (fileName === 'apple-touch-icon.png') result.apple = webPath;
+            else if (fileName === 'favicon-16x16.png') result.faviconSmall = webPath;
+            else if (fileName === 'favicon-32x32.png') result.faviconBig = webPath;
+            else if (fileName === 'favicon.ico') result.faviconIco = webPath;
+            else if (fileName === 'site.webmanifest') result.webManifest = webPath;
+
+            const needsUpdate = !(await cacheFile.exists()) || (sourceFile.lastModified > cacheFile.lastModified);
+            if (needsUpdate) {
+                try {
+                    await Bun.write(cachePath, sourceFile);
+                    this.logger.info(`Head asset cached: ${fileName}`, "CACHE");
+                } catch (error: any) {
+                    this.logger.error(`Failed to copy head asset ${fileName}: ${error.message}`, "CACHE");
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Processes and minifies an asset if it's outdated or missing.
      * @param sourcePath - Path to the original file.
      * @param type - Asset type ('css' | 'js').
      * @returns Web-accessible path to the cached/minified file.
      */
-    private async processedAsset(sourcePath: string, type: 'css' | 'js'): Promise<string> {
+    private async processAsset(sourcePath: string, type: 'css' | 'js'): Promise<string> {
         const layoutName: string = this.registry.get('config').get('theme') || 'theme';
 
         if (!sourcePath.includes(layoutName)) {
@@ -177,12 +300,15 @@ export class Render {
 
         if (needsUpdate) {
             try {
-                const content = await sourceFile.text();
-                const minified = type === 'css' 
-                    ? await this.minifyCSS(content) 
-                    : await this.minifyJS(content);
+                let content = await sourceFile.text();
 
-                await Bun.write(cachePath, minified);
+                if (!this.notMinifyFileNames.includes(name)) {
+                    content = type === 'css' 
+                        ? await this.minifyCSS(content) 
+                        : await this.minifyJS(content);
+                }
+
+                await Bun.write(cachePath, content);
                 this.logger.info(`Asset minified and cached: ${minFileName}`, "CACHE");
             } catch (error: any) {
                 this.logger.error(`Minification failed for ${sourcePath}: ${error.message}`, "MINIFY", "error");

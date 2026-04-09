@@ -263,6 +263,38 @@ interface IDiskInfo {
  */
 type ImageFormat = 'webp' | 'jpeg' | 'png' | 'avif';
 
+/**
+ * Interface for SEO-friendly URL rewriting logic.
+ * Responsible for converting internal system paths into search-engine-optimized strings.
+ */
 interface IRewriter {
+    /**
+     * Transforms a technical or internal URL into an SEO-friendly version.
+     * Often used for slug generation or removing sensitive directory structures.
+     * * @example "/product.php?id=123" -> "/products/smartphone-x"
+     * @param url - The internal system path or raw URL.
+     * @returns The SEO-optimized URL string.
+     */
     rewrite(url: string): string;
+}
+
+/**
+ * Represents the collection of HTML elements or paths required for the <head> section.
+ * Includes various icons and manifests for different platforms (Android, iOS, Web).
+ */
+interface IHeadContent {
+    /** Path to the 192x192 PNG icon for Android/Chrome. */
+    androidSmall: string;
+    /** Path to the 512x512 PNG icon for Android/Chrome. */
+    androidBig: string;
+    /** Path to the Apple Touch Icon (typically 180x180). */
+    apple: string;
+    /** Path to the 16x16 PNG favicon for browser tabs. */
+    faviconSmall: string;
+    /** Path to the 32x32 PNG favicon for browser tabs. */
+    faviconBig: string;
+    /** Path to the legacy favicon.ico file for compatibility. */
+    faviconIco: string;
+    /** Path to the PWA configuration file (site.webmanifest). */
+    webManifest: string;
 }

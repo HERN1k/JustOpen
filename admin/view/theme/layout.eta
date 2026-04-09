@@ -10,11 +10,18 @@
     
     <base href="<%= it.stringHelper.trimByChar(it.HTTPS_BASE_URL, '/') %>/" />
 
+    <link rel="icon" type="image/png" sizes="32x32" href="<%= it.head.faviconBig %>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<%= it.head.faviconSmall %>">
+    <link rel="shortcut icon" href="<%= it.head.faviconIco %>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<%= it.head.apple %>">
+    <link rel="manifest" href="<%= it.head.webManifest %>">
+
     <% it.css.forEach(function(style) { %>
         <link rel="stylesheet" href="<%= style %>" />
     <% }) %>
 </head>
-<body>
+<body class="antialiased selection:bg-[#6c5ce7] selection:text-white">
+
     <%~ it.content %>
 
     <% it.js.forEach(function(script) { %>

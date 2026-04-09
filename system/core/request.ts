@@ -8,6 +8,8 @@ import type { ParserResult, IUploadedFile } from "./types";
  * It parses the URL, POST data, Cookies, Files, and Headers.
  */
 export class Request {
+    /** Full URL string */
+    public url: URL = new URL(BASE_URL);
     /** GET parameters from the URL query string */
     public get: Record<string, string> = {};
     /** POST data from the request body (sanitized) */
@@ -57,17 +59,17 @@ export class Request {
         this.parsePost(body);
         this.parseFiles(files);
         
-        const url = new URL(urlStr, BASE_URL);
-        url.searchParams.forEach((value, key) => {
+        this.url = new URL(urlStr, BASE_URL);
+        this.url.searchParams.forEach((value, key) => {
             this.get[key] = this.clean(value);
         });
 
-        this.refreshParser(url.pathname);
+        this.refreshParser(this.url.pathname);
     }
 
     public setGet(params: Record<string, string>): void {
+        this.refreshParser(this.url.pathname);
         this.get = { ...this.get, ...params };
-        this.refreshParser();
     }
 
     /**

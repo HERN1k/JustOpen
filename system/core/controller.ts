@@ -165,6 +165,12 @@ export abstract class Controller {
      */
     protected async configurePage(path: string, statusCode: number = 200): Promise<void> {
         try {
+            this.setStyles('css/tailwind.css');
+            this.setScript('js/lucide.js');
+    
+            this.setStyles('css/main.css');
+            this.setScript('js/main.js');
+
             this.render.setPageData(this.pageData);
 
             const viewContent = await this.loadView(path, this.components);

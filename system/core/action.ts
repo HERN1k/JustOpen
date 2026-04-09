@@ -37,7 +37,8 @@ export class Action {
         // Determine the base directory (Admin vs Customer)
         const baseDir = parser.path === CUSTOMERS_DIR ? DIR_CONTROLLERS : ADMIN_DIR_CONTROLLERS;
         const filePath = join(baseDir, parser.folder, `${parser.file}.ts`);
-        
+        // console.log(parser.path);
+        // console.log(filePath);
         // Convert file name to class name: e.g., 'user_profile' -> 'UserProfileController'
         const className = StringHelper.toPascalCase(parser.file) + 'Controller';
         const action = parser.action;

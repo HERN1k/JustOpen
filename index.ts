@@ -166,16 +166,19 @@ class App {
             getParams['route'] = 'common/home';
         }
         // --- SEO URL DECODING END ---
-        
-        registry.set('logger', logger);
-        registry.set('request', new CustomRequest(
+
+        const customRequest = new CustomRequest(
             request.url,
             request.method,
             headers,
             body,
             files,
             request.headers.get('cookie') || ''
-        ).setGet(getParams));
+        );
+        customRequest.setGet(getParams);
+        
+        registry.set('logger', logger);
+        registry.set('request', customRequest);
         registry.set('response', new CustomResponse());
         registry.set('db', new DB(DB_DRIVER, DB_CONFIG));
         registry.set('config', new Config());

@@ -1,6 +1,8 @@
 <% /* Developed by Hirnyk Vlad (HERN1k) */ %>
 <% /** @layout props: IPageProps */ %>
 
-<header>
-    <p>Admin - Header</p>
+<header class="sticky top-0 z-50 flex h-[70px] items-center px-8 bg-[#1c1f2b]/80 backdrop-blur-xl border-b border-white/5">
+    <p class="font-bold text-xl text-[#6c5ce7] tracking-tight uppercase">
+        JustOpen
+    </p>
 </header>

@@ -3,9 +3,11 @@
 
 <%~ it.header %>
 
-<main>
-    <h2>Home page (Slider)</h2>
-    <div>
+<main class="flex-1 max-w-[1100px] mx-auto w-full py-12 px-6 animate-[fade-up_0.6s_ease-out]">
+    <h2 class="text-4xl md:text-5xl font-extrabold mb-2 text-center bg-gradient-to-r from-white to-[#94a3b8] bg-clip-text text-transparent">
+        Home page (Slider)
+    </h2>
+    <div class="mt-8">
         <%~ it.gallery %>
     </div>
 </main>

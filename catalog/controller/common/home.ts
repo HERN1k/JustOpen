@@ -12,9 +12,6 @@ export class HomeController extends Controller {
     public async index(): Promise<void | string> {
         this.setPageData({ title: 'Main page' });
 
-        this.setStyles('css/main.css');
-        this.setScript('js/main.js');
-
         this.components['gallery'] = await this.loadView('extension/module/slider', {
             'images': [
                 await Image.banner('catalog/temp/photo-1.jpg'),

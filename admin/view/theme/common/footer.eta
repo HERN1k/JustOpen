@@ -1,6 +1,8 @@
 <% /* Developed by Hirnyk Vlad (HERN1k) */ %>
 <% /** @layout props: IPageProps */ %>
 
-<footer>
-    <p>Admin - Footer</p>
+<footer class="mt-auto py-10 px-8 text-center bg-[#1c1f2b] border-t border-white/5">
+    <p class="text-sm text-[#94a3b8]">
+        &copy; <%= new Date().getFullYear() %> JustOpen Framework
+    </p>
 </footer>

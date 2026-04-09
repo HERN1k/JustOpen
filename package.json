@@ -4,17 +4,23 @@
   "type": "module",
   "private": true,
   "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
     "@types/babel__core": "^7.20.5",
-    "@types/bun": "^1.3.9",
+    "@types/bun": "^1.3.11",
     "@types/html-minifier-terser": "^7.0.2",
     "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3"
+    "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.2.1",
+    "tailwindcss": "^4.2.2"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
   "scripts": {
-    "dev": "bun --watch index.ts",
+    "dev:server": "bun --watch index.ts",
+    "dev:css:catalog": "bunx tailwindcss -i ./catalog/view/theme/src/css/styles.css -o ./catalog/view/theme/src/css/tailwind.css --watch",
+    "dev:css:admin": "bunx tailwindcss -i ./admin/view/theme/src/css/styles.css -o ./admin/view/theme/src/css/tailwind.css --watch",
+    "dev": "concurrently -n \"SERVER,CSS:CAT,CSS:ADM\" -c \"magenta,blue,yellow\" \"bun run dev:server\" \"bun run dev:css:catalog\" \"bun run dev:css:admin\"",
     "start": "bun index.ts"
   },
   "dependencies": {
@@ -28,7 +34,7 @@
     "html-minifier-terser": "^7.2.0",
     "lightningcss": "^1.31.1",
     "mysql2": "^3.18.2",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.9",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "sharp": "^0.34.5"
