@@ -1,6 +1,6 @@
 // Developed by Hirnyk Vlad (HERN1k)
 
-import { APP_PORT, BASE_URL, DB_CONFIG, DB_DRIVER, HTTPS_BASE_URL } from './config';
+import { APP_PORT, BASE_URL, DB_CONFIG, DB_DRIVER, DB_VIEW_ALL_TABLES, HTTPS_BASE_URL, IS_DEV } from './config';
 import { Action } from './system/core/action';
 import { Registry } from './system/core/registry';
 import { Request as CustomRequest } from './system/core/request';
@@ -35,15 +35,17 @@ class App {
     /**
      * Initializes the application and starts the Bun server.
      */
-    constructor() {
-        this.startServer();
-    }
+    constructor() { }
 
     /**
      * Starts the Bun HTTP server on the configured port.
-     * @private
+     * @public
      */
-    private startServer(): void {
+    public async startServer(): Promise<void> {
+        const db = new DB(DB_DRIVER, DB_CONFIG);
+
+        await db.applyMigration();
+
         Bun.serve({
             port: APP_PORT,
             idleTimeout: 60,
@@ -53,6 +55,10 @@ class App {
         setInterval(() => this.logTopActivity(), 36000);
 
         logger.info(`JustOpen server running at ${BASE_URL}`, "SYS");
+
+        if (IS_DEV && DB_VIEW_ALL_TABLES) {
+            await this.dumpDatabaseContent(db);
+        }
     }
 
     /**
@@ -308,6 +314,30 @@ class App {
         client.lastMethod = method;
         client.lastSeen = new Date().toISOString();
     }
+
+    private async dumpDatabaseContent(db: DB): Promise<void> {
+        try {
+            const tablesResult = await db.query<{ name: string }>(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';"
+            );
+
+            logger.info(`Database Dump: Found ${tablesResult.numRows} tables.`, "DEBUG");
+
+            for (const table of tablesResult.rows) {
+                const data = await db.query<any>(`SELECT * FROM ${table.name}`);
+                
+                console.log(`\n--- Table: ${table.name} (${data.numRows} rows) ---`);
+                if (data.numRows > 0) {
+                    console.table(data.rows);
+                } else {
+                    console.log(" (Empty)");
+                }
+            }
+        } catch (error) {
+            logger.error(`Failed to dump database: ${error}`, "DEBUG");
+        }
+    }
 }
 
-new App();
+const app = new App();
+await app.startServer();

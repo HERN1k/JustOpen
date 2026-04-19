@@ -1,23 +1,26 @@
 import mysql from 'mysql2/promise';
-import type { IDBDriver, IDBResult } from "../../core/types";
+import type { IDBConfig, IDBDriver, IDBResult } from "../../core/types";
+import type { Logger } from '../../core/logger';
 
 export class MySQLi implements IDBDriver {
-    private connection: any;
-    private lastInsertId: number = 0;
+    private connection: mysql.Pool | null = null;
+    private lastInsertId: number | null = null;
 
-    constructor(config: any) {
-        if (false) {
-            this.connection = mysql.createPool(config);
-        }
+    constructor(config: IDBConfig) {
+        this.connection = mysql.createPool(config.data);
     }
 
-    public async query(sql: string): Promise<IDBResult> {
+    public async query<T>(sql: string, params: any[] = []): Promise<IDBResult<T>> {
+        if (this.connection === null) {
+            throw new Error("Database connection error");
+        }
+
         const [rows] = await this.connection.execute(sql);
         
         return {
             rows: Array.isArray(rows) ? rows : [],
             numRows: Array.isArray(rows) ? rows.length : 0
-        } as IDBResult;
+        } as IDBResult<T>;
     }
 
     public escape(value: string): string {
@@ -40,11 +43,18 @@ export class MySQLi implements IDBDriver {
         });
     }
 
-    public getLastId(): number {
+    public getLastId(): number | null {
         return this.lastInsertId;
     }
 
     public close(): void {
-        this.connection.end();
+        if (this.connection !== null) {
+            this.connection.end();
+            this.connection = null;
+        }
+    }
+
+    public async applyMigration(): Promise<void> {
+        return;
     }
 }

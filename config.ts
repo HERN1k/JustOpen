@@ -2,6 +2,9 @@
 
 import { join } from 'path';
 import { DBDriverName } from './system/core/db';
+import type { IDBConfig } from './system/core/types';
+
+export const IS_DEV: boolean = true;
 
 export const ROOT_DIR: string = process.cwd();
 
@@ -25,14 +28,20 @@ export const ADMIN_DIR_CONTROLLERS: string = join(ROOT_DIR, `${ADMIN_DIR}/contro
 export const ADMIN_DIR_MODELS: string = join(ROOT_DIR, `${ADMIN_DIR}/model`);
 export const ADMIN_DIR_VIEW: string = join(ROOT_DIR, `${ADMIN_DIR}/view`);
 
-export const IMAGE_DIR = join(ROOT_DIR, 'image');
+export const IMAGE_DIR: string = join(ROOT_DIR, 'image');
 
-export const CACHE_DIR = join(ROOT_DIR, 'storage/cache');
+export const CACHE_DIR: string = join(ROOT_DIR, 'storage/cache');
 
-export const LOGS_DIR = join(CACHE_DIR, 'logs');
+export const LOGS_DIR: string = join(CACHE_DIR, 'logs');
 
-export const CACHE_IMAGE_DIR = join(CACHE_DIR, 'image');
+export const CACHE_IMAGE_DIR: string = join(CACHE_DIR, 'image');
 
 export const DB_PREFIX: string = '';
-export const DB_DRIVER: DBDriverName = DBDriverName.MySQL;
-export const DB_CONFIG: string = '';
+export const DB_DRIVER: DBDriverName = DBDriverName.SQLite;
+export const DB_CONFIG: IDBConfig = { 
+    data: {
+        dbFilePath: join(ROOT_DIR, 'storage/db/sqlite/master.db')
+    }
+};
+export const DB_MIGRATIONS_DIR: string = join(ROOT_DIR, 'storage/db/migrations');
+export const DB_VIEW_ALL_TABLES: boolean = false;

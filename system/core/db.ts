@@ -1,14 +1,16 @@
 // Developed by Hirnyk Vlad (HERN1k)
 
 import { MySQLi } from "../lib/db/mysqli";
+import { SQLitei } from "../lib/db/sqlite";
 import { logger } from "./logger"; 
-import type { IDBDriver, IDBResult } from "./types";
+import type { IDBConfig, IDBDriver, IDBResult } from "./types";
 
 /**
  * Available database drivers supported by the engine.
  */
 export enum DBDriverName {
-    MySQL = 'mysqli'
+    MySQL   = 'mysqli',
+    SQLite  = 'sqlite',
 }
 
 /**
@@ -28,11 +30,14 @@ export class DB {
      * @param config - Connection configuration object (host, user, pass, etc.).
      * @throws Error if the driver fails to initialize or is not supported.
      */
-    constructor(driver: DBDriverName, config: any) {
+    constructor(driver: DBDriverName, config: IDBConfig) {
         try {
             switch (driver) {
                 case DBDriverName.MySQL:
                     this.driver = new MySQLi(config);
+                    break;
+                case DBDriverName.SQLite:
+                    this.driver = new SQLitei(config);
                     break;
                 default:
                     const errorMsg = `Database driver '${driver}' is not supported.`;
@@ -51,9 +56,9 @@ export class DB {
      * @param sql - The SQL statement to execute.
      * @returns Promise resolving to the driver-specific result object.
      */
-    public async query(sql: string): Promise<IDBResult> {
+    public async query<T>(sql: string): Promise<IDBResult<T>> {
         try {
-            return await this.driver.query(sql);
+            return await this.driver.query<T>(sql);
         } catch (err: any) {
             // Log the specific SQL error and the query that caused it for debugging
             logger.error(`SQL Error: ${err.message} | Query: ${sql}`, "DB_QUERY", "sql_error");
@@ -74,7 +79,11 @@ export class DB {
      * Retrieves the auto-generated ID from the last INSERT operation.
      * @returns The last insertion ID as a number.
      */
-    public getLastId(): number {
+    public getLastId(): number | null {
         return this.driver.getLastId();
+    }
+
+    public async applyMigration(): Promise<void> {
+        await this.driver.applyMigration();
     }
 }

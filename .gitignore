@@ -1,6 +1,8 @@
 # dependencies (bun install)
 node_modules
 
+tailwind.css
+
 # output
 out
 dist
@@ -9,6 +11,7 @@ dist
 # cache logs images
 image/
 storage/cache/
+storage/db/sqlite
 logs/
 
 # code coverage
